@@ -1,0 +1,10 @@
+[Unit]
+Description=VastAi Stats Service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/home/ergot/vast/start_on_gcp.sh
+
+[Install]
+WantedBy=multi-user.target
