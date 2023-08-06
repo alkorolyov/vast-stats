@@ -99,6 +99,10 @@ def install_daemon_service():
 if __name__ == '__main__':
     logging.info('=> Begin vast-stats software install')
 
+    # apt update and install basic packages
+    process_run(['sudo', 'apt-get', 'update', '-y'])
+    process_run(['sudo', 'apt-get', 'install', 'mc', '-y'])
+
     mkdir(INSTALL_DIR)
     os.chdir(INSTALL_DIR)
 
