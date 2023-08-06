@@ -9,9 +9,8 @@ import inspect
 import datetime as dt
 import logging
 
-
 INSTALL_DIR = "/var/lib/vast-stats"
-DAEMON_GROUP = 'vast'
+DAEMON_GROUP = 'vast-stats'
 DAEMON_USER = 'vast'
 
 logging.basicConfig(
@@ -93,6 +92,11 @@ def create_daemon_user():
     process_run(["chown", f"{DAEMON_GROUP}:{DAEMON_USER}", INSTALL_DIR, "-R"])
 
 
+def install_pip_requirements():
+    process_run(["curl", "-sSL", "https://bootstrap.pypa.io/get-pip.py", "-o", "get-pip.py"])
+    process_run(["python3", "get-pip.py"])
+
+
 def download_vast_stats():
     pass
 
@@ -104,10 +108,13 @@ def install_daemon_service():
 if __name__ == '__main__':
     logging.info('=> Begin vast-stats software install')
 
+    set_locale()
+
     # apt update and install basic packages
     process_run(['sudo', 'apt-get', 'update', '-y'])
     process_run(['sudo', 'apt-get', 'install', 'mc', '-y'])
 
+    logging.info('=> Create installation dir')
     mkdir(INSTALL_DIR)
     os.chdir(INSTALL_DIR)
 
