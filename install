@@ -89,6 +89,7 @@ def process_run(*a, **kw):
         return e.returncode
     except FileNotFoundError or FileExistsError as e:
         logging.warning(e)
+        logging.warning(e.errno)
         return e.errno
     except OSError as e:
         logging.error(e)
@@ -136,7 +137,7 @@ def install_pip_requirements():
 
     logging.info('=> Check if pip installed')
     if process_run(['pip', '--version']) != 0:
-        process_run(['sudo', 'apt-get', 'install', 'python3-pip', '-y'])
+        process_run(['apt-get', 'install', 'python3-pip', '-y'])
     #     logging.info('=> Pip not installed - downloading')
     #     process_run(["curl", "-sSL", "https://bootstrap.pypa.io/get-pip.py", "-o", "get-pip.py"])
     #     process_run(["python3", "get-pip.py"])
