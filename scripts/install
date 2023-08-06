@@ -11,6 +11,7 @@ import logging
 
 
 INSTALL_DIR = "/var/lib/vast-stats"
+DAEMON_GROUP = 'vast'
 DAEMON_USER = 'vast'
 
 logging.basicConfig(filename="vast_stats_install.log",
@@ -35,6 +36,8 @@ def format_process_args(*a, **kw):
         res.append(repr(x))
     for k, v in kw.items():
         # skip default args
+        if k == 'env':
+            continue
         if k in ["stdout", "stderr"] and v is PIPE:
             continue
         if k in ["universal_newlines", "check", "capture_output"] and v is True:
@@ -75,7 +78,7 @@ def mkdir(path):
 
 def create_daemon_user():
     logging.info('=> Create vast-stats daemon user')
-    process_run(["groupadd", "vast"])
+    process_run(["groupadd", DAEMON_GROUP])
     process_run(["adduser",
                     "--system",
                     "--gecos", "",
@@ -85,7 +88,7 @@ def create_daemon_user():
                     "--ingroup", "docker",
                     "--shell", "/bin/bash",
                     DAEMON_USER])
-    process_run(["chown", f"vast:{DAEMON_USER}", INSTALL_DIR, "-R"])
+    process_run(["chown", f"{DAEMON_GROUP}:{DAEMON_USER}", INSTALL_DIR, "-R"])
 
 
 def download_vast_stats():
