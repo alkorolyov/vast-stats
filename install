@@ -132,7 +132,6 @@ def change_user(name: str):
 
 
 def install_pip_requirements():
-    logging.info('=> Install from requirements.txt')
     process_run(["curl", "-sSL", f"{GIT_RAW_URL}/requirements.txt", "-o", "requirements.txt"])
     process_run(["pip", "install", "-r", "requirements.txt"])
 
@@ -152,10 +151,11 @@ if __name__ == '__main__':
 
     # apt update and install basic packages
     # process_run(['sudo', 'apt-get', 'update', '-y'])
+    process_run(['sudo', 'apt-get', 'install', 'python3-pip', '-y'])
 
-    logging.info('=> Check if pip installed')
-    if process_run(['pip', '--version']) != 0:
-        process_run(['sudo', 'apt-get', 'install', 'python3-pip', '-y'])
+    # log_green('=> Check if pip installed')
+    # if process_run(['pip', '--version']) != 0:
+
 
     # check if daemon user exists
     if process_run(['id', '-u', DAEMON_USER]) != 0:
