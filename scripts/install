@@ -95,7 +95,7 @@ def create_daemon_user():
 def install_pip_requirements():
     process_run(["curl", "-sSL", "https://bootstrap.pypa.io/get-pip.py", "-o", "get-pip.py"])
     process_run(["python3", "get-pip.py"])
-    process_run(["pip", "install", "-f", "requirements.txt"])
+    process_run(["pip", "install", "-r", "requirements.txt"])
 
 
 def download_vast_stats():
