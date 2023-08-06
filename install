@@ -117,6 +117,10 @@ def create_daemon_user():
 def change_user(name: str):
     try:
         user = pwd.getpwnam(name)
+        os.environ['HOME'   ] = user.pw_dir
+        os.environ['LOGNAME'] = name
+        os.environ['PWD'    ] = os.getcwd()
+        os.environ['USER'   ] = name
         os.setgid(user.pw_gid)
         os.setuid(user.pw_uid)
     except Exception as e:
@@ -163,6 +167,7 @@ if __name__ == '__main__':
         create_daemon_user()
 
     change_user(DAEMON_USER)
+
     os.chdir(INSTALL_DIR)
 
     process_run(['whoami'])
