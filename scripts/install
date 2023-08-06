@@ -95,8 +95,14 @@ def create_daemon_user():
 
 
 def install_pip_requirements():
-    process_run(["curl", "-sSL", "https://bootstrap.pypa.io/get-pip.py", "-o", "get-pip.py"])
-    process_run(["python3", "get-pip.py"])
+    # check if pip installed
+    logging.info('=> Check if pip installed')
+    if process_run(['pip', '--version']) != 0:
+        logging.info('=> Pip not installed - downloading')
+        process_run(["curl", "-sSL", "https://bootstrap.pypa.io/get-pip.py", "-o", "get-pip.py"])
+        process_run(["python3", "get-pip.py"])
+
+    logging.info('=> Install from requirements.txt')
     process_run(["curl", "-sSL", f"{GIT_RAW_URL}/requirements.txt", "-o", "requirements.txt"])
     process_run(["pip", "install", "-r", "requirements.txt"])
 
@@ -126,6 +132,7 @@ if __name__ == '__main__':
     if process_run(['id', '-u', DAEMON_USER]) != 0:
         create_daemon_user()
 
+    logging.info('=> Install pip requirements')
     install_pip_requirements()
 
     logging.info('=> Downloading vast-stats')
