@@ -87,12 +87,12 @@ def process_run(*a, **kw):
     except CalledProcessError as e:
         logging.warning(e.stderr)
         return e.returncode
-    # except FileNotFoundError:
-
-
-    # except OSError as e:
-    #     logging.error(e)
-    #     raise
+    except FileNotFoundError or FileExistsError as e:
+        logging.warning(e)
+        return e.stderr
+    except OSError as e:
+        logging.error(e)
+        raise
 
 
 def mkdir(path):
@@ -133,19 +133,6 @@ def change_user(name: str):
 
 def install_pip_requirements():
     # check if pip installed
-
-    try:
-        completed_process = subprocess.run(
-            ['pip', '--version'],
-            capture_output=True,
-            text=True,
-            check=True
-        )
-    except subprocess.CalledProcessError as e:
-        print("CalledProcessError occurred:")
-        print("Return code:", e.returncode)
-        print("Standard output:", e.stdout)
-        print("Standard error:", e.stderr)
 
     logging.info('=> Check if pip installed')
     if process_run(['pip', '--version']) != 0:
