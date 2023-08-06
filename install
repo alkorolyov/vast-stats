@@ -89,7 +89,7 @@ def process_run(*a, **kw):
         return e.returncode
     except FileNotFoundError or FileExistsError as e:
         logging.warning(e)
-        return e.stderr
+        return e.errno
     except OSError as e:
         logging.error(e)
         raise
