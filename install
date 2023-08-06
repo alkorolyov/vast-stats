@@ -133,6 +133,20 @@ def change_user(name: str):
 
 def install_pip_requirements():
     # check if pip installed
+
+    try:
+        completed_process = subprocess.run(
+            ["ls", "non_existent_directory"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+    except subprocess.CalledProcessError as e:
+        print("CalledProcessError occurred:")
+        print("Return code:", e.returncode)
+        print("Standard output:", e.stdout)
+        print("Standard error:", e.stderr)
+
     logging.info('=> Check if pip installed')
     if process_run(['pip', '--version']) != 0:
         process_run(['sudo', 'apt-get', 'install', 'python3-pip', '-y'])
@@ -159,7 +173,7 @@ if __name__ == '__main__':
     set_locale()
 
     # apt update and install basic packages
-    process_run(['sudo', 'apt-get', 'update', '-y'])
+    # process_run(['sudo', 'apt-get', 'update', '-y'])
 
     # log_green('=> Create installation dir')
     # mkdir(INSTALL_DIR)
