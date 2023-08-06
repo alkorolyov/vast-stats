@@ -80,7 +80,6 @@ def mkdir(path):
 
 
 def create_daemon_user():
-    logging.info('=> Create vast-stats daemon user')
     process_run(["groupadd", DAEMON_GROUP])
     process_run(["adduser",
                     "--system",
@@ -130,6 +129,7 @@ if __name__ == '__main__':
 
     # check if daemon user exists
     if process_run(['id', '-u', DAEMON_USER]) != 0:
+        logging.info('=> Create vast-stats daemon user')
         create_daemon_user()
 
     logging.info('=> Install pip requirements')
