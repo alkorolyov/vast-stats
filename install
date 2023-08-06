@@ -90,9 +90,9 @@ def process_run(*a, **kw):
     # except FileNotFoundError:
 
 
-    except OSError as e:
-        logging.error(e)
-        raise
+    # except OSError as e:
+    #     logging.error(e)
+    #     raise
 
 
 def mkdir(path):
