@@ -165,7 +165,7 @@ if __name__ == '__main__':
 
     # change_user(DAEMON_USER)
 
-    # os.chdir(INSTALL_DIR)
+    os.chdir(INSTALL_DIR)
 
     # process_run(['whoami'])
     # logging.info(os.getcwd())
