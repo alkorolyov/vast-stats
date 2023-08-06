@@ -122,6 +122,8 @@ if __name__ == '__main__':
     if process_run(['id', '-u', DAEMON_USER]) != 0:
         create_daemon_user()
 
+    install_pip_requirements()
+
     logging.info('=> Downloading vast-stats')
     download_vast_stats()
 
