@@ -166,7 +166,7 @@ if __name__ == '__main__':
     os.chdir(INSTALL_DIR)
 
     process_run(['whoami'])
-    print(os.getcwd())
+    logging.info(os.getcwd())
     # process_run(["sudo", "su", DAEMON_USER])
 
     log_green('=> Install pip requirements')
