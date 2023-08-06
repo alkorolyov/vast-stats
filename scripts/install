@@ -106,12 +106,12 @@ def create_daemon_user():
                     "--system",
                     "--gecos", "",
                     "--home", INSTALL_DIR,
-                    "--no-create-home",
+                    # "--no-create-home",
                     "--disabled-password",
                     "--ingroup", DAEMON_GROUP,
                     "--shell", "/bin/bash",
                     DAEMON_USER])
-    process_run(["chown", f"{DAEMON_GROUP}:{DAEMON_USER}", INSTALL_DIR, "-R"])
+    process_run(["chown", f"{DAEMON_USER}:{DAEMON_GROUP}", INSTALL_DIR, "-R"])
 
 
 def change_user(name: str):
@@ -152,10 +152,10 @@ if __name__ == '__main__':
 
     # apt update and install basic packages
     process_run(['sudo', 'apt-get', 'update', '-y'])
-    process_run(['sudo', 'apt-get', 'install', 'mc', '-y'])
+    process_run(['sudo', 'apt-get', 'install', 'mc', 'git', '-y'])
 
-    log_green('=> Create installation dir')
-    mkdir(INSTALL_DIR)
+    # log_green('=> Create installation dir')
+    # mkdir(INSTALL_DIR)
 
     # check if daemon user exists
     if process_run(['id', '-u', DAEMON_USER]) != 0:
