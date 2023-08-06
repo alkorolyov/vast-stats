@@ -24,6 +24,10 @@ logging.basicConfig(
 maybe_sudo = ["sudo"] if os.geteuid() != 0 else []
 
 
+def log_green(msg: str):
+    logging.info(green(msg))
+
+
 class bcolors:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
@@ -131,7 +135,7 @@ def install_daemon_service():
 
 
 if __name__ == '__main__':
-    logging.info(green('=> Begin vast-stats software install'))
+    log_green('=> Begin vast-stats software install')
 
     set_locale()
 
@@ -139,20 +143,20 @@ if __name__ == '__main__':
     process_run(['sudo', 'apt-get', 'update', '-y'])
     process_run(['sudo', 'apt-get', 'install', 'mc', '-y'])
 
-    logging.info(green('=> Create installation dir'))
+    log_green('=> Create installation dir')
     mkdir(INSTALL_DIR)
     os.chdir(INSTALL_DIR)
 
     # check if daemon user exists
     if process_run(['id', '-u', DAEMON_USER]) != 0:
-        logging.info(green('=> Create vast-stats daemon user'))
+        logging.info('=> Create vast-stats daemon user')
         create_daemon_user()
     process_run(["su", DAEMON_USER])
 
-    logging.info(green('=> Install pip requirements'))
+    log_green('=> Install pip requirements')
     install_pip_requirements()
 
-    logging.info(green('=> Downloading vast-stats'))
+    log_green('=> Downloading vast-stats')
     download_vast_stats()
     process_run(['whoami'])
 
