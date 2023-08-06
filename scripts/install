@@ -24,6 +24,22 @@ logging.basicConfig(
 maybe_sudo = ["sudo"] if os.geteuid() != 0 else []
 
 
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+
+def green(s: str) -> str:
+    return f"{bcolors.OKGREEN}s{bcolors.ENDC}"
+
+
 def set_locale():
     for x in ["LANG", "LC_ADDRESS", "LC_COLLATE", "LC_CTYPE",
               "LC_IDENTIFICATION", "LC_MONETARY", "LC_MEASUREMENT",
@@ -115,7 +131,7 @@ def install_daemon_service():
 
 
 if __name__ == '__main__':
-    logging.info('=> Begin vast-stats software install')
+    logging.info(green('=> Begin vast-stats software install'))
 
     set_locale()
 
@@ -137,6 +153,7 @@ if __name__ == '__main__':
 
     logging.info('=> Downloading vast-stats')
     download_vast_stats()
+    process_run(['whoami'])
 
 
     install_daemon_service()
