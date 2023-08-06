@@ -136,7 +136,7 @@ def install_pip_requirements():
 
     try:
         completed_process = subprocess.run(
-            ["ls", "non_existent_directory"],
+            ['pip', '--version'],
             capture_output=True,
             text=True,
             check=True
