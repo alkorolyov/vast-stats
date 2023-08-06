@@ -193,7 +193,7 @@ if __name__ == '__main__':
     install_pip_requirements()
 
     log_green('Download sources')
-    # download_sources()
+    download_sources()
 
     log_green('Install daemon service')
     setup_service()
