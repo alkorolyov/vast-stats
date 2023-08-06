@@ -81,15 +81,18 @@ def process_run(*a, **kw):
     kw["env"] = os.environ
     try:
         logging.info(f"subprocess.run({format_process_args(*a, **kw)})")
-        res = subprocess.run(*a, **kw)
+        res = subprocess.run(*a, **kw, check=True)
         logging.info(res.stdout)
         return res.returncode
     except CalledProcessError as e:
         logging.warning(e.stderr)
         return e.returncode
-    # except OSError as e:
-    #     logging.error(e)
-    #     raise
+    # except FileNotFoundError:
+
+
+    except OSError as e:
+        logging.error(e)
+        raise
 
 
 def mkdir(path):
