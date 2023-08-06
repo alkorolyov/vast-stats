@@ -14,9 +14,11 @@ INSTALL_DIR = "/var/lib/vast-stats"
 DAEMON_GROUP = 'vast'
 DAEMON_USER = 'vast'
 
-logging.basicConfig(filename="vast_stats_install.log",
-                    format='[%(asctime)s] [%(levelname)s] %(message)s',
-                    level=logging.INFO)
+logging.basicConfig(
+    # filename="vast_stats_install.log",
+    format='[%(asctime)s] [%(levelname)s] %(message)s',
+    level=logging.INFO
+)
 
 maybe_sudo = ["sudo"] if os.geteuid() != 0 else []
 
