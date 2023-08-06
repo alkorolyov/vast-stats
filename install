@@ -87,9 +87,9 @@ def process_run(*a, **kw):
     except CalledProcessError as e:
         logging.warning(e.stderr)
         return e.returncode
-    except OSError as e:
-        logging.error(e)
-        raise
+    # except OSError as e:
+    #     logging.error(e)
+    #     raise
 
 
 def mkdir(path):
