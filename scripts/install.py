@@ -1,4 +1,5 @@
 #!/usr/bin/python
+
 import os
 import errno
 import subprocess
@@ -36,7 +37,7 @@ def format_process_args(*a, **kw):
         # skip default args
         if k in ["stdout", "stderr"] and v is PIPE:
             continue
-        if k in ["universal_newlines", "check"] and v is True:
+        if k in ["universal_newlines", "check", "capture_output"] and v is True:
             continue
 
         res.append(f"{k}={repr(v)}")
@@ -44,8 +45,9 @@ def format_process_args(*a, **kw):
 
 
 def process_run(*a, **kw):
-    kw.setdefault("stdout", PIPE)
-    kw.setdefault("stderr", PIPE)
+    kw.setdefault("capture_output", True)
+    # kw.setdefault("stdout", PIPE)
+    # kw.setdefault("stderr", PIPE)
     kw.setdefault("universal_newlines", True)
     kw.setdefault('check', True)
     # optional = kw.pop("optional", False)
@@ -55,20 +57,61 @@ def process_run(*a, **kw):
         res = subprocess.run(*a, **kw)
         logging.info(res.stdout)
         return res.returncode
-    # except OSError as e:
-    #     if e.errno == errno.ENOENT and optional:
-    #         logging.warning(e)
-    #         return None
-    #     logging.error(e)
-    #     raise
     except CalledProcessError as e:
-        logging.error(e.stderr)
+        logging.warning(e.stderr)
+        return e.returncode
+    except OSError as e:
+        logging.error(e)
         raise
+
+
+def mkdir(path):
+    try:
+        os.makedirs(path, exist_ok=True)
+    except OSError as e:
+        logging.error(e)
+        raise
+
+
+def create_daemon_user():
+    logging.info('=> Create vast-stats daemon user')
+    process_run(["groupadd", "vast"])
+    process_run(["adduser",
+                    "--system",
+                    "--gecos", "",
+                    "--home", INSTALL_DIR,
+                    "--no-create-home",
+                    "--disabled-password",
+                    "--ingroup", "docker",
+                    "--shell", "/bin/bash",
+                    DAEMON_USER])
+    process_run(["chown", f"vast:{DAEMON_USER}", INSTALL_DIR, "-R"])
+
+
+def download_vast_stats():
+    pass
+
+
+def install_daemon_service():
+    pass
+
 
 if __name__ == '__main__':
     logging.info('=> Begin vast-stats software install')
 
+    mkdir(INSTALL_DIR)
+    os.chdir(INSTALL_DIR)
+
     # check if daemon user exists
-    process_run(['id', '-u', DAEMON_USER])
-    logging.info('=> Create vast-stats daemon user')
+    if process_run(['id', '-u', DAEMON_USER]) != 0:
+        create_daemon_user()
+
+    logging.info('=> Downloading vast-stats')
+    download_vast_stats()
+
+
+    install_daemon_service()
+
+
+
 

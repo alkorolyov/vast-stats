@@ -1,0 +1,1 @@
+Stats for vast.ai meant to be run of Google VM
