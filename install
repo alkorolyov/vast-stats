@@ -75,7 +75,7 @@ def process_run(*a, **kw):
     kw.setdefault("capture_output", True)
     # kw.setdefault("stdout", PIPE)
     # kw.setdefault("stderr", PIPE)
-    kw.setdefault("universal_newlines", True)
+    kw.setdefault("text", True)
     kw.setdefault('check', True)
     # optional = kw.pop("optional", False)
     kw["env"] = os.environ
