@@ -64,8 +64,8 @@ def format_process_args(*a, **kw):
             continue
         # if k in ["stdout", "stderr"] and v is PIPE:
         #     continue
-        # if k in ["universal_newlines", "check", "capture_output"] and v is True:
-        #     continue
+        if k in ["text", "check", "capture_output"] and v is True:
+            continue
 
         res.append(f"{k}={repr(v)}")
     return ", ".join(res)
@@ -166,8 +166,8 @@ if __name__ == '__main__':
 
     os.chdir(INSTALL_DIR)
 
-    process_run(['whoami'])
-    logging.info(os.getcwd())
+    # process_run(['whoami'])
+    # logging.info(os.getcwd())
     # process_run(["sudo", "su", DAEMON_USER])
 
     log_green('=> Install pip requirements')
@@ -175,8 +175,6 @@ if __name__ == '__main__':
 
     log_green('=> Downloading vast-stats')
     download_vast_stats()
-
-
 
     install_daemon_service()
 
