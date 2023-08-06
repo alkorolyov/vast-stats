@@ -37,7 +37,7 @@ class bcolors:
 
 
 def green(s: str) -> str:
-    return f"{bcolors.OKGREEN}s{bcolors.ENDC}"
+    return f"{bcolors.OKGREEN}{s}{bcolors.ENDC}"
 
 
 def set_locale():
@@ -139,19 +139,19 @@ if __name__ == '__main__':
     process_run(['sudo', 'apt-get', 'update', '-y'])
     process_run(['sudo', 'apt-get', 'install', 'mc', '-y'])
 
-    logging.info('=> Create installation dir')
+    logging.info(green('=> Create installation dir'))
     mkdir(INSTALL_DIR)
     os.chdir(INSTALL_DIR)
 
     # check if daemon user exists
     if process_run(['id', '-u', DAEMON_USER]) != 0:
-        logging.info('=> Create vast-stats daemon user')
+        logging.info(green('=> Create vast-stats daemon user'))
         create_daemon_user()
 
-    logging.info('=> Install pip requirements')
+    logging.info(green('=> Install pip requirements'))
     install_pip_requirements()
 
-    logging.info('=> Downloading vast-stats')
+    logging.info(green('=> Downloading vast-stats'))
     download_vast_stats()
     process_run(['whoami'])
 
