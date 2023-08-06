@@ -107,6 +107,7 @@ def create_daemon_user():
                     "--shell", "/bin/bash",
                     DAEMON_USER])
     process_run(["chown", f"{DAEMON_GROUP}:{DAEMON_USER}", INSTALL_DIR, "-R"])
+    process_run(["su", DAEMON_USER])
 
 
 def install_pip_requirements():
