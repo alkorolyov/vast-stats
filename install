@@ -62,10 +62,10 @@ def format_process_args(*a, **kw):
         # skip default args
         if k == 'env':
             continue
-        if k in ["stdout", "stderr"] and v is PIPE:
-            continue
-        if k in ["universal_newlines", "check", "capture_output"] and v is True:
-            continue
+        # if k in ["stdout", "stderr"] and v is PIPE:
+        #     continue
+        # if k in ["universal_newlines", "check", "capture_output"] and v is True:
+        #     continue
 
         res.append(f"{k}={repr(v)}")
     return ", ".join(res)
@@ -81,7 +81,7 @@ def process_run(*a, **kw):
     kw["env"] = os.environ
     try:
         logging.info(f"subprocess.run({format_process_args(*a, **kw)})")
-        res = subprocess.run(*a, **kw, check=True)
+        res = subprocess.run(*a, **kw)
         logging.info(res.stdout)
         return res.returncode
     except CalledProcessError as e:
