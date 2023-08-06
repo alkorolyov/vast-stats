@@ -156,7 +156,6 @@ if __name__ == '__main__':
 
     log_green('=> Create installation dir')
     mkdir(INSTALL_DIR)
-    os.chdir(INSTALL_DIR)
 
     # check if daemon user exists
     if process_run(['id', '-u', DAEMON_USER]) != 0:
@@ -164,7 +163,10 @@ if __name__ == '__main__':
         create_daemon_user()
 
     change_user(DAEMON_USER)
+    os.chdir(INSTALL_DIR)
+
     process_run(['whoami'])
+    print(os.getcwd())
     # process_run(["sudo", "su", DAEMON_USER])
 
     log_green('=> Install pip requirements')
