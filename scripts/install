@@ -151,7 +151,7 @@ if __name__ == '__main__':
     if process_run(['id', '-u', DAEMON_USER]) != 0:
         logging.info('=> Create vast-stats daemon user')
         create_daemon_user()
-    process_run(["su", DAEMON_USER])
+    process_run(["sudo", "su", DAEMON_USER])
 
     log_green('=> Install pip requirements')
     install_pip_requirements()
