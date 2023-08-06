@@ -86,7 +86,7 @@ def create_daemon_user():
                     "--home", INSTALL_DIR,
                     "--no-create-home",
                     "--disabled-password",
-                    "--ingroup", "docker",
+                    "--ingroup", DAEMON_GROUP,
                     "--shell", "/bin/bash",
                     DAEMON_USER])
     process_run(["chown", f"{DAEMON_GROUP}:{DAEMON_USER}", INSTALL_DIR, "-R"])
@@ -95,6 +95,7 @@ def create_daemon_user():
 def install_pip_requirements():
     process_run(["curl", "-sSL", "https://bootstrap.pypa.io/get-pip.py", "-o", "get-pip.py"])
     process_run(["python3", "get-pip.py"])
+    process_run(["pip", "install", "-f", "requirements.txt"])
 
 
 def download_vast_stats():
