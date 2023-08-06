@@ -137,16 +137,34 @@ def install_pip_requirements():
     process_run(run_as + ["pip", "install", "-r", "requirements.txt"])
 
 
-def download_vast_stats():
-    pass
+def download_sources():
+    process_run(run_as + ["curl", "-sSL", f"{GIT_RAW_URL}/main", "-o", "main"])
+    mkdir('src')
+    process_run(run_as + ["curl", "-sSL", f"{GIT_RAW_URL}/src/tables.py", "-o", "src/tables.py"])
+    process_run(run_as + ["curl", "-sSL", f"{GIT_RAW_URL}/src/preprocess.py", "-o", "src/preprocess.py"])
+    process_run(run_as + ["curl", "-sSL", f"{GIT_RAW_URL}/src/utils.py", "-o", "src/utils.py"])
+    mkdir('service')
+    process_run(run_as + ["curl", "-sSL", f"{GIT_RAW_URL}/service/vast.service", "-o", "service/vast.service"])
+    process_run(run_as + ["curl", "-sSL", f"{GIT_RAW_URL}/service/start.service", "-o", "service/start.sh"])
 
 
-def install_daemon_service():
+
+
+
+
+def setup_service():
+    process_run(["chmod", "+x", "service/start.sh"])
+    process_run(["cp", "service/vast.service", "/etc/systemd/system/vast.service"])
+    process_run(["systemctl", "daemon-reload"])
+    process_run(["systemctl", "enable", "vast.service"])
+    process_run(["systemctl", "start", "vast.service"])
+
+
     pass
 
 
 if __name__ == '__main__':
-    log_green('=> Begin vast-stats software install')
+    log_green('Begin vast-stats software install')
 
     set_locale()
 
@@ -160,7 +178,7 @@ if __name__ == '__main__':
 
     # check if daemon user exists
     if process_run(['id', '-u', DAEMON_USER]) != 0:
-        logging.info('=> Create vast-stats daemon user')
+        logging.info('Create vast-stats daemon user')
         create_daemon_user()
 
     # change_user(DAEMON_USER)
@@ -171,15 +189,14 @@ if __name__ == '__main__':
     # logging.info(os.getcwd())
     # process_run(["sudo", "su", DAEMON_USER])
 
-    log_green('=> Install pip requirements')
+    log_green('Install pip requirements')
     install_pip_requirements()
 
-    log_green('=> Download sources')
-    download_vast_stats()
+    log_green('Download sources')
+    download_sources()
 
-
-    log_green('=> Install daemon service')
-    install_daemon_service()
+    log_green('Install daemon service')
+    setup_service()
 
 
 

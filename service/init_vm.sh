@@ -26,8 +26,7 @@ curl -sSL https://raw.githubusercontent.com/alkorolyov/vast/main/scripts/start_o
 chmod +x start_on_gcp.sh
 
 # register as a service
-curl -sSL https://raw.githubusercontent.com/alkorolyov/vast/main/scripts/vast.service -o vast.service
-cp vast.service /etc/systemd/system/vast.service
+curl -sSL https://raw.githubusercontent.com/alkorolyov/vast/main/scripts/vast.service -o /etc/systemd/system/vast.service
 systemctl daemon-reload
 systemctl enable vast
 systemctl start vast

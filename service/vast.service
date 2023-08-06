@@ -4,7 +4,8 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/home/ergot/vast/start_on_gcp.sh
+ExecStart=/var/lib/vast-stats/service/start.sh
+Restart=on-failure
 
 [Install]
 WantedBy=multi-user.target
