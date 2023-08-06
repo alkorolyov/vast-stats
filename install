@@ -23,6 +23,7 @@ logging.basicConfig(
 )
 
 maybe_sudo = ["sudo"] if os.geteuid() != 0 else []
+run_as = ["sudo", "-u", DAEMON_USER]
 
 
 def log_green(msg: str):
@@ -132,8 +133,8 @@ def change_user(name: str):
 
 
 def install_pip_requirements():
-    process_run(["curl", "-sSL", f"{GIT_RAW_URL}/requirements.txt", "-o", "requirements.txt"])
-    process_run(["pip", "install", "-r", "requirements.txt"])
+    process_run([run_as, "curl", "-sSL", f"{GIT_RAW_URL}/requirements.txt", "-o", "requirements.txt"])
+    process_run([run_as, "pip", "install", "-r", "requirements.txt"])
 
 
 def download_vast_stats():
@@ -150,8 +151,8 @@ if __name__ == '__main__':
     set_locale()
 
     # apt update and install basic packages
-    process_run(['sudo', 'apt-get', 'update', '-y'])
-    process_run(['sudo', 'apt-get', 'install', 'python3-pip', '-y'])
+    process_run(['apt-get', 'update', '-y'])
+    process_run(['apt-get', 'install', 'python3-pip', '-y'])
 
     # log_green('=> Check if pip installed')
     # if process_run(['pip', '--version']) != 0:
@@ -162,9 +163,9 @@ if __name__ == '__main__':
         logging.info('=> Create vast-stats daemon user')
         create_daemon_user()
 
-    change_user(DAEMON_USER)
+    # change_user(DAEMON_USER)
 
-    os.chdir(INSTALL_DIR)
+    # os.chdir(INSTALL_DIR)
 
     # process_run(['whoami'])
     # logging.info(os.getcwd())
@@ -173,9 +174,11 @@ if __name__ == '__main__':
     log_green('=> Install pip requirements')
     install_pip_requirements()
 
-    log_green('=> Downloading vast-stats')
+    log_green('=> Download sources')
     download_vast_stats()
 
+
+    log_green('=> Install daemon service')
     install_daemon_service()
 
 
