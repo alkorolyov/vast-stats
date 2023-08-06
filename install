@@ -89,7 +89,6 @@ def process_run(*a, **kw):
         return e.returncode
     except FileNotFoundError or FileExistsError as e:
         logging.warning(e)
-        logging.warning(e.errno)
         return e.errno
     except OSError as e:
         logging.error(e)
@@ -133,15 +132,6 @@ def change_user(name: str):
 
 
 def install_pip_requirements():
-    # check if pip installed
-
-    logging.info('=> Check if pip installed')
-    if process_run(['pip', '--version']) != 0:
-        process_run(['apt-get', 'install', 'python3-pip', '-y'])
-    #     logging.info('=> Pip not installed - downloading')
-    #     process_run(["curl", "-sSL", "https://bootstrap.pypa.io/get-pip.py", "-o", "get-pip.py"])
-    #     process_run(["python3", "get-pip.py"])
-
     logging.info('=> Install from requirements.txt')
     process_run(["curl", "-sSL", f"{GIT_RAW_URL}/requirements.txt", "-o", "requirements.txt"])
     process_run(["pip", "install", "-r", "requirements.txt"])
@@ -163,8 +153,9 @@ if __name__ == '__main__':
     # apt update and install basic packages
     # process_run(['sudo', 'apt-get', 'update', '-y'])
 
-    # log_green('=> Create installation dir')
-    # mkdir(INSTALL_DIR)
+    logging.info('=> Check if pip installed')
+    if process_run(['pip', '--version']) != 0:
+        process_run(['sudo', 'apt-get', 'install', 'python3-pip', '-y'])
 
     # check if daemon user exists
     if process_run(['id', '-u', DAEMON_USER]) != 0:
