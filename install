@@ -150,7 +150,7 @@ if __name__ == '__main__':
     set_locale()
 
     # apt update and install basic packages
-    # process_run(['sudo', 'apt-get', 'update', '-y'])
+    process_run(['sudo', 'apt-get', 'update', '-y'])
     process_run(['sudo', 'apt-get', 'install', 'python3-pip', '-y'])
 
     # log_green('=> Check if pip installed')
