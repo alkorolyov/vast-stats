@@ -107,7 +107,6 @@ def create_daemon_user():
                     "--shell", "/bin/bash",
                     DAEMON_USER])
     process_run(["chown", f"{DAEMON_GROUP}:{DAEMON_USER}", INSTALL_DIR, "-R"])
-    process_run(["su", DAEMON_USER])
 
 
 def install_pip_requirements():
@@ -148,6 +147,7 @@ if __name__ == '__main__':
     if process_run(['id', '-u', DAEMON_USER]) != 0:
         logging.info(green('=> Create vast-stats daemon user'))
         create_daemon_user()
+    process_run(["su", DAEMON_USER])
 
     logging.info(green('=> Install pip requirements'))
     install_pip_requirements()
