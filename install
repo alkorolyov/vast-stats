@@ -118,7 +118,7 @@ def create_daemon_user():
                     DAEMON_USER])
     # process_run(['mkdir', '-p', f'{INSTALL_DIR}/src'])
     # process_run(['mkdir', '-p', f'{INSTALL_DIR}/serv'])
-    process_run(['chmod', f'{DAEMON_USER}:{DAEMON_GROUP}', INSTALL_DIR, '-R'])
+    process_run(['chmod', '-R', f'{DAEMON_USER}:{DAEMON_GROUP}', INSTALL_DIR])
 
 
 
