@@ -116,10 +116,7 @@ def create_daemon_user():
                     '--ingroup', DAEMON_GROUP,
                     '--shell', '/bin/bash',
                     DAEMON_USER])
-    # process_run(['mkdir', '-p', f'{INSTALL_DIR}/src'])
-    # process_run(['mkdir', '-p', f'{INSTALL_DIR}/serv'])
     process_run(['chmod', '-R', f'{DAEMON_USER}:{DAEMON_GROUP}', INSTALL_DIR])
-
 
 
 def change_user(name: str):
@@ -150,7 +147,7 @@ def download_sources():
     process_run(['curl', '-sSL', f'{GIT_RAW_URL}/src/preprocess.py', '-o', f'{INSTALL_DIR}/src/preprocess.py'])
     process_run(['curl', '-sSL', f'{GIT_RAW_URL}/src/utils.py', '-o', f'{INSTALL_DIR}/src/utils.py'])
     #
-    process_run(['mkdir', '-p', 'serv'])
+    process_run(['mkdir', '-p', f'{INSTALL_DIR}/serv'])
     process_run(['curl', '-sSL', f'{GIT_RAW_URL}/serv/vast.service', '-o', f'{INSTALL_DIR}/serv/vast.service'])
     process_run(['curl', '-sSL', f'{GIT_RAW_URL}/serv/start.service', '-o', f'{INSTALL_DIR}/serv/start.sh'])
 
