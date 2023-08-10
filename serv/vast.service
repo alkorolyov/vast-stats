@@ -5,8 +5,7 @@ After=network.target
 [Service]
 Type=simple
 User=vast
-WorkingDirectory=/var/lib/vast-stats
-ExecStart=python3 main.py
+ExecStart=/usr/bin/python3 /var/lib/vast-stats/main.py
 Restart=on-failure
 
 [Install]

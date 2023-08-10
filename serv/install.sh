@@ -23,6 +23,7 @@ sudo -u vast python3 -m pip install -r $INSTALL_DIR/requirements.txt
 
 # install service
 cp $INSTALL_DIR/serv/vast.service /etc/systemd/system
+chown $DAEMON_USER:$DAEMON_GROUP /etc/systemd/system/vast.service
 chmod +x $INSTALL_DIR/serv/start.sh
 systemctl daemon-reload
 systemctl enable vast
