@@ -8,10 +8,9 @@ DAEMON_USER="vast"
 apt-get update -y
 apt-get install curl git python3-pip -y
 
-mkdir $INSTALL_DIR
-cd $INSTALL_DIR
 
 # git clone
+cd /var/lib
 git clone https://github.com/alkorolyov/vast-stats/
 
 # create vast user
