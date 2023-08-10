@@ -134,8 +134,8 @@ def change_user(name: str):
 
 
 def install_pip_requirements():
-    process_run(run_as + ['curl', '-sSL', f'{GIT_RAW_URL}/requirements.txt', '-o', 'requirements.txt'])
-    process_run(run_as + ['pip', 'install', '-r', 'requirements.txt'])
+    process_run(run_as + ['curl', '-sSL', f'{GIT_RAW_URL}/requirements.txt', '-o', f'{INSTALL_DIR}/requirements.txt'])
+    process_run(run_as + ['pip', 'install', '-r', f'{INSTALL_DIR}/requirements.txt'])
 
 
 def download_sources():
