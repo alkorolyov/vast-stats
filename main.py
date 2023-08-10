@@ -92,6 +92,7 @@ if __name__ == '__main__':
         print(f'[{timestamp}] [API] request completed in {time() - start:.2f}s')
 
         start = time()
+
         df_to_tmp_table(offers, 'tmp_offers', conn)
         df_to_tmp_table(machines, 'tmp_machines', conn)
         print(f'[{timestamp}] [TMP_TABLES] created in {time_ms(time() - start)}ms')

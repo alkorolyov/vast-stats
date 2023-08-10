@@ -4,8 +4,10 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/var/lib/vast-stats/serv/start.sh
+User=vast
+WorkingDirectory=/var/lib/vast-stats
+ExecStart=python3 main.py
 Restart=on-failure
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target

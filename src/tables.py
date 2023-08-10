@@ -41,7 +41,7 @@ STR_COLS = ['cpu_name', 'cuda_max_good', 'disk_name', 'driver_version',
 DROP_COLS = ['credit_balance', 'credit_discount','location', 'geolocation', 'bundle_id',
              'discount_rate', 'discounted_dph_total', 'discounted_hourly',
              'dlperf_per_dphtotal', 'duration', 'flops_per_dphtotal', 'start_date',
-             'verified', 'host_run_time', 'cpu_cores_effective', 'gpu_frac']
+             'verified', 'host_run_time', 'cpu_cores_effective', 'gpu_frac', 'chunks']
 
 AVG_COLS = ['disk_bw', 'gpu_mem_bw', 'pcie_bw',
             'dlperf', 'inet_down', 'inet_up']
