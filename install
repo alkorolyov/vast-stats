@@ -116,7 +116,7 @@ def create_daemon_user():
                     '--ingroup', DAEMON_GROUP,
                     '--shell', '/bin/bash',
                     DAEMON_USER])
-    process_run(['chmod', '-R', f'{DAEMON_USER}:{DAEMON_GROUP}', INSTALL_DIR])
+    process_run(['chown', '-R', f'{DAEMON_USER}:{DAEMON_GROUP}', INSTALL_DIR])
 
 
 def change_user(name: str):
