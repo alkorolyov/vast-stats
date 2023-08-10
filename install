@@ -138,17 +138,14 @@ def install_pip_requirements():
 
 
 def download_sources():
-    process_run(run_as + ["curl", "-sSL", f"{GIT_RAW_URL}/main", "-o", "main"])
+    process_run(run_as + ["curl", "-sSL", f"{GIT_RAW_URL}/main", "-o", f"{INSTALL_DIR}/main"])
     mkdir('src')
-    process_run(run_as + ["curl", "-sSL", f"{GIT_RAW_URL}/src/tables.py", "-o", "src/tables.py"])
-    process_run(run_as + ["curl", "-sSL", f"{GIT_RAW_URL}/src/preprocess.py", "-o", "src/preprocess.py"])
-    process_run(run_as + ["curl", "-sSL", f"{GIT_RAW_URL}/src/utils.py", "-o", "src/utils.py"])
+    process_run(run_as + ["curl", "-sSL", f"{GIT_RAW_URL}/src/tables.py", "-o", f"{INSTALL_DIR}/src/tables.py"])
+    process_run(run_as + ["curl", "-sSL", f"{GIT_RAW_URL}/src/preprocess.py", "-o", f"{INSTALL_DIR}/src/preprocess.py"])
+    process_run(run_as + ["curl", "-sSL", f"{GIT_RAW_URL}/src/utils.py", "-o", f"{INSTALL_DIR}/src/utils.py"])
     mkdir('service')
-    process_run(run_as + ["curl", "-sSL", f"{GIT_RAW_URL}/service/vast.service", "-o", "service/vast.service"])
-    process_run(run_as + ["curl", "-sSL", f"{GIT_RAW_URL}/service/start.service", "-o", "service/start.sh"])
-
-
-
+    process_run(run_as + ["curl", "-sSL", f"{GIT_RAW_URL}/service/vast.service", "-o", f"{INSTALL_DIR}/service/vast.service"])
+    process_run(run_as + ["curl", "-sSL", f"{GIT_RAW_URL}/service/start.service", "-o", f"{INSTALL_DIR}/service/start.sh"])
 
 
 
@@ -183,7 +180,7 @@ if __name__ == '__main__':
 
     # change_user(DAEMON_USER)
 
-    os.chdir(INSTALL_DIR)
+    # os.chdir(INSTALL_DIR)
 
     # process_run(['whoami'])
     # logging.info(os.getcwd())
