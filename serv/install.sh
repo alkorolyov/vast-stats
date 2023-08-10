@@ -1,8 +1,8 @@
 #!/bin/bash
 
-INSTALL_DIR="/var/lib/vast-stats"
-DAEMON_GROUP="vast-stats"
-DAEMON_USER="vast"
+export VAST_INSTALL_DIR=/var/lib/vast-stats
+export VAST_DAEMON_GROUP=vast-stats
+export VAST_DAEMON_USER=vast
 
 
 apt-get update -y
@@ -14,17 +14,17 @@ cd /var/lib
 git clone https://github.com/alkorolyov/vast-stats/
 
 # create vast user
-groupadd $DAEMON_GROUP
-adduser --system --home $INSTALL_DIR --disabled-password --ingroup $DAEMON_GROUP --shell /bin/bash $DAEMON_USER
-chown -R $DAEMON_USER:$DAEMON_GROUP $INSTALL_DIR
+groupadd $VAST_DAEMON_GROUP
+adduser --system --home $VAST_INSTALL_DIR --disabled-password --ingroup $VAST_DAEMON_GROUP --shell /bin/bash $VAST_DAEMON_GROUP
+chown -R $VAST_DAEMON_GROUP:$VAST_DAEMON_GROUP $VAST_INSTALL_DIR
 
 # pip
-sudo -u vast python3 -m pip install -r $INSTALL_DIR/requirements.txt
+sudo -u vast python3 -m pip install -r $VAST_INSTALL_DIR/requirements.txt
 
 # install service
-cp $INSTALL_DIR/serv/vast.service /etc/systemd/system
-chown $DAEMON_USER:$DAEMON_GROUP /etc/systemd/system/vast.service
-chmod +x $INSTALL_DIR/serv/start.sh
+cp $VAST_INSTALL_DIR/serv/vast.service /etc/systemd/system
+chown $VAST_DAEMON_GROUP:$VAST_DAEMON_GROUP /etc/systemd/system/vast.service
+chmod +x $VAST_INSTALL_DIR/serv/start.sh
 systemctl daemon-reload
 systemctl enable vast
 systemctl start vast
