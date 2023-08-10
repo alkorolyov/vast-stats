@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/var/lib/vast-stats/service/start.sh
+ExecStart=/var/lib/vast-stats/serv/start.sh
 Restart=on-failure
 
 [Install]

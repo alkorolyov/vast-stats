@@ -154,7 +154,7 @@ def download_sources():
 
 
 def setup_service():
-    process_run(['chmod', '+x', f'{INSTALL_DIR}/serv/start.sh'])
+    process_run(run_as + ['chmod', '+x', f'{INSTALL_DIR}/serv/start.sh'])
     process_run(['cp', f'{INSTALL_DIR}/serv/vast.service', '/etc/systemd/system'])
     process_run(['systemctl', 'daemon-reload'])
     process_run(['systemctl', 'enable', 'vast.service'])
