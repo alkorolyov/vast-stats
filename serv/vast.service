@@ -10,4 +10,4 @@ ExecStart=python3 main.py
 Restart=on-failure
 
 [Install]
-WantedBy=default.target
+WantedBy=multi-user.target
