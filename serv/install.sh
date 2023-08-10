@@ -20,11 +20,11 @@ adduser --system --home $INSTALL_DIR --disabled-password --ingroup $DAEMON_GROUP
 chown -R $DAEMON_USER:$DAEMON_GROUP $INSTALL_DIR
 
 # pip
-sudo -u vast python3 -m pip install -r requirements.txt
+sudo -u vast python3 -m pip install -r $INSTALL_DIR/requirements.txt
 
 # install service
-cp serv/vast.service /etc/systemd/system
-chmod +x serv/start.sh
+cp $INSTALL_DIR/serv/vast.service /etc/systemd/system
+chmod +x $INSTALL_DIR/serv/start.sh
 systemctl daemon-reload
 systemctl enable vast
 systemctl start vast
