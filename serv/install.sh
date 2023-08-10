@@ -16,7 +16,7 @@ git clone https://github.com/alkorolyov/vast-stats/
 
 # create vast user
 groupadd $DAEMON_GROUP
-adduser --system --gecos --home $INSTALL_DIR --disabled-password --ingroup $DAEMON_GROUP --shell /bin/bash $DAEMON_USER
+adduser --system --home $INSTALL_DIR --disabled-password --ingroup $DAEMON_GROUP --shell /bin/bash $DAEMON_USER
 chown -R $DAEMON_USER:$DAEMON_GROUP $INSTALL_DIR
 
 # pip
