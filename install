@@ -141,21 +141,21 @@ def install_pip_requirements():
 def download_sources():
     process_run(['mkdir', '-p', f'{INSTALL_DIR}'])
     # process_run(['curl', '-sSL', f'{GIT_RAW_URL}/main.py', '-o', f'{INSTALL_DIR}/main.py'])
-    process_run(['cp', f'home/ergot/vast-stats/main.py', f'{INSTALL_DIR}'])
+    process_run(['cp', f'/home/ergot/vast-stats/main.py', f'{INSTALL_DIR}'])
 
     process_run(['mkdir', '-p', f'{INSTALL_DIR}/src'])
     # process_run(['curl', '-sSL', f'{GIT_RAW_URL}/src/tables.py', '-o', f'{INSTALL_DIR}/src/tables.py'])
     # process_run(['curl', '-sSL', f'{GIT_RAW_URL}/src/preprocess.py', '-o', f'{INSTALL_DIR}/src/preprocess.py'])
     # process_run(['curl', '-sSL', f'{GIT_RAW_URL}/src/utils.py', '-o', f'{INSTALL_DIR}/src/utils.py'])
-    process_run(['cp', f'home/ergot/vast-stats/src/tables.py', f'{INSTALL_DIR}/src'])
-    process_run(['cp', f'home/ergot/vast-stats/src/preprocess.py', f'{INSTALL_DIR}/src'])
-    process_run(['cp', f'home/ergot/vast-stats/src/utils.py', f'{INSTALL_DIR}/src'])
+    process_run(['cp', f'/home/ergot/vast-stats/src/tables.py', f'{INSTALL_DIR}/src'])
+    process_run(['cp', f'/home/ergot/vast-stats/src/preprocess.py', f'{INSTALL_DIR}/src'])
+    process_run(['cp', f'/home/ergot/vast-stats/src/utils.py', f'{INSTALL_DIR}/src'])
 
     process_run(['mkdir', '-p', f'{INSTALL_DIR}/serv'])
     # process_run(['curl', '-sSL', f'{GIT_RAW_URL}/serv/vast.service', '-o', f'{INSTALL_DIR}/serv/vast.service'])
     # process_run(['curl', '-sSL', f'{GIT_RAW_URL}/serv/start.service', '-o', f'{INSTALL_DIR}/serv/start.sh'])
-    process_run(['cp', f'home/ergot/vast-stats/serv/vast.service', f'{INSTALL_DIR}/serv'])
-    process_run(['cp', f'home/ergot/vast-stats/serv/start.service', f'{INSTALL_DIR}/serv'])
+    process_run(['cp', f'/home/ergot/vast-stats/serv/vast.service', f'{INSTALL_DIR}/serv'])
+    process_run(['cp', f'/home/ergot/vast-stats/serv/start.service', f'{INSTALL_DIR}/serv'])
 
 
 
