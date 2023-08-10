@@ -155,7 +155,7 @@ def download_sources():
     # process_run(['curl', '-sSL', f'{GIT_RAW_URL}/serv/vast.service', '-o', f'{INSTALL_DIR}/serv/vast.service'])
     # process_run(['curl', '-sSL', f'{GIT_RAW_URL}/serv/start.service', '-o', f'{INSTALL_DIR}/serv/start.sh'])
     process_run(['cp', f'/home/ergot/vast-stats/serv/vast.service', f'{INSTALL_DIR}/serv'])
-    process_run(['cp', f'/home/ergot/vast-stats/serv/start.service', f'{INSTALL_DIR}/serv'])
+    process_run(['cp', f'/home/ergot/vast-stats/serv/start.sh', f'{INSTALL_DIR}/serv'])
 
 
 
