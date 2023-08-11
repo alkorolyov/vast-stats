@@ -15,8 +15,8 @@ adduser --system --ingroup $GROUP --disabled-password --no-create-home --home $D
 chown -R $USER:$GROUP $DIR
 
 # pip
-apt update -y
-apt install python3 python3-pip -y
+apt -qq update -y
+apt -qq install python3 python3-pip -y
 sudo -u vast python3 -m pip install -r $DIR/requirements.txt
 
 # Create and run service
