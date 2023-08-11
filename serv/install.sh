@@ -16,7 +16,7 @@ chown -R $USER:$GROUP $DIR
 
 # pip
 apt update -y
-apt install python3-pip
+apt install python3 python3-pip -y
 sudo -u vast python3 -m pip install -r $DIR/requirements.txt
 
 # Create and run service
