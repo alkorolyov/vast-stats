@@ -10,7 +10,7 @@ from src.tables import get_offers, get_machines, df_to_tmp_table, COST_COLS, HAR
 from src.preprocess import preprocess
 from src.utils import time_ms, time_utc_now
 
-DB_PATH = 'data/vast.db'
+DB_PATH = './data/vast.db'
 
 TIMEOUT = 20
 
