@@ -1,30 +1,124 @@
 #!/bin/bash
 
-export VAST_INSTALL_DIR=/var/lib/vast-stats
-export VAST_DAEMON_GROUP=vast-stats
-export VAST_DAEMON_USER=vast
+DIR="/var/lib/vast-stats"
+GROUP="vast-stats"
+USER="vast"
+
+# git clone
+mkdir $DIR
+cd $DIR
+git clone https://github.com/alkorolyov/vast-stats/ .
+
+# create user/group
+addgroup $GROUP
+adduser --system --ingroup $GROUP --disabled-password --no-create-home --home $DIR $USER
+chown -R $USER:$GROUP $DIR
+
+# pip
+sudo -u vast python3 -m pip install -r $DIR/requirements.txt
+
+# Create and run service
+SERVICE_CONTENT="[Unit]\n
+Description=VastAi Stats Service\n
+After=network.target\n
+\n
+[Service]\n
+Type=simple\n
+User=vast\n
+WorkingDirectory=$DIR\n
+ExecStart=$DIR/main.py\n
+Restart=on-failure\n
+\n
+[Install]\n
+WantedBy=multi-user.target\n
+"
+
+SERVICE_FILE="/etc/systemd/system/vast.service"
+echo -e $SERVICE_CONTENT > $SERVICE_FILE
+
+chmod +x $DIR/main.py
+systemctl daemon-reload
+#systemctl enable vast
+systemctl start vast
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+INSTALL_DIR="/var/lib/vast-stats"
+DAEMON_GROUP="vast-stats"
+DAEMON_USER="vast"
+
+# Specify the content of the vast.service file
+SERVICE_CONTENT="[Unit]\n
+Description=VastAi Stats Service\n
+After=network.target\n
+\n
+[Service]\n
+Type=simple\n
+User=vast\n
+ExecStart=/usr/bin/python3 \$INSTALL_DIR/main.py\n
+Restart=on-failure\n
+\n
+[Install]\n
+WantedBy=multi-user.target\n
+"
+
+SERVICE_FILE="/etc/systemd/system/vast.service"
+echo -e $SERVICE_CONTENT > $SERVICE_FILE
 
 
 apt-get update -y
 apt-get install curl git python3-pip -y
 
-
 # git clone
-cd /var/lib
+cd /var/lib || exit
 git clone https://github.com/alkorolyov/vast-stats/
 
 # create vast user
-groupadd $VAST_DAEMON_GROUP
-adduser --system --home $VAST_INSTALL_DIR --disabled-password --ingroup $VAST_DAEMON_GROUP --shell /bin/bash $VAST_DAEMON_GROUP
-chown -R $VAST_DAEMON_GROUP:$VAST_DAEMON_GROUP $VAST_INSTALL_DIR
+groupadd $DAEMON_GROUP
+adduser --system --home $INSTALL_DIR --disabled-password --ingroup $DAEMON_GROUP --shell /bin/bash $DAEMON_GROUP
+chown -R $DAEMON_GROUP:$DAEMON_GROUP $INSTALL_DIR
 
 # pip
-sudo -u vast python3 -m pip install -r $VAST_INSTALL_DIR/requirements.txt
+sudo -u vast python3 -m pip install -r $INSTALL_DIR/requirements.txt
 
 # install service
-cp $VAST_INSTALL_DIR/serv/vast.service /etc/systemd/system
-chown $VAST_DAEMON_GROUP:$VAST_DAEMON_GROUP /etc/systemd/system/vast.service
-chmod +x $VAST_INSTALL_DIR/serv/start.sh
+cp $INSTALL_DIR/serv/vast.service /etc/systemd/system
+chown $DAEMON_GROUP:$DAEMON_GROUP /etc/systemd/system/vast.service
+chmod +x $INSTALL_DIR/serv/start.sh
 systemctl daemon-reload
 systemctl enable vast
 systemctl start vast
