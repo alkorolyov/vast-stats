@@ -39,15 +39,12 @@ pd.set_option('display.max_rows', 500)
 pd.set_option('display.max_columns', 50)
 
 parser = argparse.ArgumentParser(description='Vast Stats Service')
-parser.add_argument('--db_path', default='./data', help='Database store path')
+parser.add_argument('--db_path', help='Database store path')
 
 if __name__ == '__main__':
 
     args = vars(parser.parse_args())
-    db_path = args.get('db_path')
-    if not os.path.exists(db_path):
-        os.mkdir(db_path)
-    db_file = f"{db_path}/vast.db"
+    db_file = f"{args.get('db_path')}/vast.db"
 
     conn = sqlite3.connect(db_file)
 
