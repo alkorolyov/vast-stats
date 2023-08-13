@@ -38,7 +38,6 @@ cp -f main.py $INSTALL_DIR
 cp -rf src $INSTALL_DIR
 chown -R $USER:$GROUP $INSTALL_DIR
 chown -R $USER:$GROUP $DB_DIR
-chmod -x $INSTALL_DIR/main.py
 
 echo "=> Apt update"
 apt-get -qq update -y
@@ -60,7 +59,7 @@ Type=simple
 User=$USER
 Group=$GROUP
 WorkingDirectory=$INSTALL_DIR
-ExecStart=$INSTALL_DIR/main.py --db.path $DATA_DIR
+ExecStart=python3 $INSTALL_DIR/main.py --db.path $DATA_DIR
 Restart=on-failure
 
 [Install]
