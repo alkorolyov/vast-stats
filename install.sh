@@ -44,7 +44,8 @@ echo "=> Apt update"
 apt -qq update -y
 
 echo "=> Install python3 and pip"
-apt -qq install python3 python3-pip -y
+apt -qq install python3 -y
+apt -qq install python3-pip -y
 
 echo "=> Install pip requirements"
 sudo -u $USER python3 -m pip -q install -r requirements.txt
