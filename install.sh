@@ -48,7 +48,7 @@ apt -qq install python3 python3-pip -y
 echo "=> Install pip requirements"
 sudo -u $USER python3 -m pip -q install -r requirements.txt
 
-echo "=> Create and Start service"
+echo "=> Create service config"
 SERVICE_CONTENT="
 [Unit]
 Description=VastAi Stats Service
@@ -81,3 +81,5 @@ else
     status="${RED}$status${NC}"
 fi
 echo -e "=> Service status: $status"
+
+echo "=> Install complete"
