@@ -60,7 +60,7 @@ Type=simple
 User=$USER
 Group=$GROUP
 WorkingDirectory=$INSTALL_DIR
-ExecStart=python3 $INSTALL_DIR/main.py --db_path $DATA_DIR
+ExecStart=python3 $INSTALL_DIR/main.py --db_path $DB_DIR
 #Restart=on-failure
 
 [Install]
@@ -68,7 +68,6 @@ WantedBy=multi-user.target
 "
 SERVICE_NAME='vast-stats'
 
-echo "ExecStart=python3 $INSTALL_DIR/main.py --db_path $DATA_DIR"
 echo -e "$SERVICE_CONTENT" > /etc/systemd/system/$SERVICE_NAME.service
 
 echo "=> Start service"
