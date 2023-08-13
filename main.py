@@ -42,7 +42,7 @@ parser.add_argument('--db.path', default='./data', help='Database store path')
 
 if __name__ == '__main__':
 
-    args = parser.parse_args()
+    args = vars(parser.parse_args())
     db_path = args['db.path']
 
     conn = sqlite3.connect(f"{db_path}/vast.db")
