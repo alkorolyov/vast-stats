@@ -41,11 +41,10 @@ chown -R $USER:$GROUP $INSTALL_DIR
 chown -R $USER:$GROUP $DB_DIR
 
 echo "=> Apt update"
-apt -qq update -y
+apt-get -qq update -y
 
 echo "=> Install python3 and pip"
-apt -qq install python3 -y
-apt -qq install python3-pip -y
+apt-get -qq install python3 python3-pip -y
 
 echo "=> Install pip requirements"
 sudo -u $USER python3 -m pip -q install -r requirements.txt

@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+import os.path
 
 import requests
 import argparse
@@ -43,9 +44,12 @@ parser.add_argument('--db.path', default='./data', help='Database store path')
 if __name__ == '__main__':
 
     args = vars(parser.parse_args())
-    db_path = f"{args['db.path']}/vast.db"
+    db_path = args['db.path']
+    if not os.path.exists(db_path):
+        os.mkdir(db_path)
+    db_file = f"{db_path}/vast.db"
 
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_file)
 
     for table in tables:
         table.init_db(conn)
@@ -82,7 +86,7 @@ if __name__ == '__main__':
 
         start_total_db = time()
 
-        conn = sqlite3.connect(db_path)
+        conn = sqlite3.connect(db_file)
 
         output = conn.execute('SELECT timestamp FROM reliability_ts ORDER BY ROWID DESC LIMIT 1').fetchall()
         last_timestamp = output[0][0] if output else 0
