@@ -36,6 +36,8 @@ cp -f main.py $INSTALL_DIR
 mkdir $INSTALL_DIR/src
 cp -rf src $INSTALL_DIR/src
 chown -R $USER:$GROUP $INSTALL_DIR
+chown -R $USER:$GROUP $DB_DIR
+
 
 echo "=> Apt update"
 apt -qq update -y
@@ -67,6 +69,7 @@ SERVICE_NAME='vast-stats'
 
 echo -e "$SERVICE_CONTENT" > /etc/systemd/system/$SERVICE_NAME.service
 
+echo "=> Start service"
 systemctl daemon-reload
 systemctl start $SERVICE_NAME
 
