@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import requests
+import argparse
 
 import sqlite3
 import pandas as pd
@@ -9,8 +10,6 @@ from time import sleep, time
 from src.tables import get_offers, get_machines, df_to_tmp_table, COST_COLS, HARDWARE_COLS, EOD_COLS, AVG_COLS, Timeseries, MapTable, OnlineTS, MachineTS
 from src.preprocess import preprocess
 from src.utils import time_ms, time_utc_now
-
-DB_PATH = './data/vast.db'
 
 TIMEOUT = 20
 
@@ -38,8 +37,15 @@ tables = [
 pd.set_option('display.max_rows', 500)
 pd.set_option('display.max_columns', 50)
 
+parser = argparse.ArgumentParser(description='Vast Stats Service')
+parser.add_argument('--db.path', default='./data', help='Database store path')
+
 if __name__ == '__main__':
-    conn = sqlite3.connect(DB_PATH)
+
+    args = parser.parse_args()
+    db_path = args['db.path']
+
+    conn = sqlite3.connect(f"{db_path}/vast.db")
 
     for table in tables:
         table.init_db(conn)
@@ -76,7 +82,7 @@ if __name__ == '__main__':
 
         start_total_db = time()
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = sqlite3.connect(db_path)
 
         output = conn.execute('SELECT timestamp FROM reliability_ts ORDER BY ROWID DESC LIMIT 1').fetchall()
         last_timestamp = output[0][0] if output else 0

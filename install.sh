@@ -1,45 +1,80 @@
 #!/bin/bash
 
-DIR="/var/lib/vast-stats"
-GROUP="vast-stats"
-USER="vast"
+# Define ANSI escape codes for colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+NC='\033[0m' # No Color
 
-# create folders and download sources
-mkdir $DIR
-cd $DIR
-mkdir data
-git clone https://github.com/alkorolyov/vast-stats/ .
+INSTALL_DIR="/opt/vast-stats"
+DB_DIR="/var/lib/vast-stats"
+USER="vast-stats"
+GROUP=$USER
 
-# create user/group
-addgroup $GROUP
-adduser --system --ingroup $GROUP --disabled-password --no-create-home --home $DIR $USER
-chown -R $USER:$GROUP $DIR
+echo -e "=> ${GREEN}Start installation of Vast Stats service${NC}"
 
-# pip
+if [[ $UID -ne 0 ]]; then
+    echo "Installation should be run as root."
+    exit
+fi
+
+echo "=> Git clone sources to /tmp"
+cd /tmp
+git clone https://github.com/alkorolyov/vast-stats/
+cd vast-stats/
+
+echo "=> Create project dirs: $INSTALL_DIR $DB_DIR"
+mkdir $INSTALL_DIR
+mkdir $DB_DIR
+
+echo "=> Create $USER user/group"
+useradd -rs /bin/false $USER -d $INSTALL_DIR
+
+echo "=> Copy sources to $INSTALL_DIR"
+cp -f requirements.txt $INSTALL_DIR
+cp -f main.py $INSTALL_DIR
+mkdir $INSTALL_DIR/src
+cp -rf src $INSTALL_DIR/src
+chown -R $USER:$GROUP $INSTALL_DIR
+
+echo "=> Apt update"
 apt -qq update -y
+
+echo "=> Install python3 and pip"
 apt -qq install python3 python3-pip -y
-sudo -u vast python3 -m pip -q install -r $DIR/requirements.txt
 
-# Create and run service
-SERVICE_CONTENT="[Unit]\n
-Description=VastAi Stats Service\n
-After=network.target\n
-\n
-[Service]\n
-Type=simple\n
-User=vast\n
-WorkingDirectory=$DIR\n
-ExecStart=$DIR/main.py\n
-Restart=on-failure\n
-\n
-[Install]\n
-WantedBy=multi-user.target\n
+echo "=> Install pip requirements"
+sudo -u $USER python3 -m pip -q install -r requirements.txt
+
+echo "=> Create and Start service"
+SERVICE_CONTENT="
+[Unit]
+Description=VastAi Stats Service
+After=network.target
+
+[Service]
+Type=simple
+User=$USER
+Group=$GROUP
+WorkingDirectory=$INSTALL_DIR
+ExecStart=$INSTALL_DIR/main.py --db.path $DATA_DIR
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
 "
+SERVICE_NAME='vast-stats'
 
-SERVICE_FILE="/etc/systemd/system/vast.service"
-echo -e "$SERVICE_CONTENT" > "$SERVICE_FILE"
+echo -e "$SERVICE_CONTENT" > /etc/systemd/system/$SERVICE_NAME.service
 
-chmod +x $DIR/main.py
 systemctl daemon-reload
-#systemctl enable vast
-systemctl start vast
+systemctl start $SERVICE_NAME
+
+# check service status
+status=$(systemctl is-active $SERVICE_NAME)
+if [[ "$status" == "active" ]]; then
+    status="${GREEN}$status${NC}"
+else
+    status="${RED}$status${NC}"
+fi
+echo -e "=> Service status: $status"
