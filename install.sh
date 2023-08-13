@@ -35,10 +35,10 @@ cp -f requirements.txt $INSTALL_DIR
 
 cp -f __init__.py $INSTALL_DIR
 cp -f main.py $INSTALL_DIR
-chmod -x $INSTALL_DIR/main.py
 cp -rf src $INSTALL_DIR
 chown -R $USER:$GROUP $INSTALL_DIR
 chown -R $USER:$GROUP $DB_DIR
+chmod -x $INSTALL_DIR/main.py
 
 echo "=> Apt update"
 apt-get -qq update -y
