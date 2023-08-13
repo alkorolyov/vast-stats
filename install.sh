@@ -34,8 +34,8 @@ echo "=> Copy sources to $INSTALL_DIR"
 cp -f requirements.txt $INSTALL_DIR
 
 cp -f main.py $INSTALL_DIR
+chmod -x main.py
 cp -f __init__.py $INSTALL_DIR
-chmod -x $INSTALL_DIR/*.py
 cp -rf src $INSTALL_DIR
 chown -R $USER:$GROUP $INSTALL_DIR
 chown -R $USER:$GROUP $DB_DIR
