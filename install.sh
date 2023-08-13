@@ -32,12 +32,14 @@ useradd -rs /bin/false $USER -d $INSTALL_DIR
 
 echo "=> Copy sources to $INSTALL_DIR"
 cp -f requirements.txt $INSTALL_DIR
+
 cp -f main.py $INSTALL_DIR
+chmod -x $INSTALL_DIR/main.py
+
 mkdir $INSTALL_DIR/src
 cp -rf src $INSTALL_DIR/src
 chown -R $USER:$GROUP $INSTALL_DIR
 chown -R $USER:$GROUP $DB_DIR
-
 
 echo "=> Apt update"
 apt -qq update -y
