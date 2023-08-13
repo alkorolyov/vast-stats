@@ -59,7 +59,7 @@ Type=simple
 User=$USER
 Group=$GROUP
 WorkingDirectory=$INSTALL_DIR
-ExecStart=python3 $INSTALL_DIR/main.py --db.path $DATA_DIR
+ExecStart=python3 $INSTALL_DIR/main.py --db_path $DATA_DIR
 Restart=on-failure
 
 [Install]
