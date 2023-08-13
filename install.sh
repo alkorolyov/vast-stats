@@ -43,7 +43,8 @@ echo "=> Apt update"
 apt-get -qq update -y
 
 echo "=> Install python3 and pip"
-apt-get -qq install python3 python3-pip -y
+apt-get -qq install python3 -y
+apt-get -qq install python3-pip -y
 
 echo "=> Install pip requirements"
 sudo -u $USER python3 -m pip -q install -r requirements.txt
@@ -60,13 +61,14 @@ User=$USER
 Group=$GROUP
 WorkingDirectory=$INSTALL_DIR
 ExecStart=python3 $INSTALL_DIR/main.py --db_path $DATA_DIR
-Restart=on-failure
+#Restart=on-failure
 
 [Install]
 WantedBy=multi-user.target
 "
 SERVICE_NAME='vast-stats'
 
+echo "ExecStart=python3 $INSTALL_DIR/main.py --db_path $DATA_DIR"
 echo -e "$SERVICE_CONTENT" > /etc/systemd/system/$SERVICE_NAME.service
 
 echo "=> Start service"
