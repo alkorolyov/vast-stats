@@ -1,12 +1,10 @@
 #!/usr/bin/python3
-import os.path
-
-import requests
 import argparse
-
 import sqlite3
 import pandas as pd
+import logging
 from time import sleep, time
+
 
 from src.tables import get_offers, get_machines, df_to_tmp_table, COST_COLS, HARDWARE_COLS, EOD_COLS, AVG_COLS, Timeseries, MapTable, OnlineTS, MachineTS
 from src.preprocess import preprocess
@@ -41,11 +39,13 @@ pd.set_option('display.max_columns', 50)
 parser = argparse.ArgumentParser(description='Vast Stats Service')
 parser.add_argument('--db_path', default='.', help='Database store path')
 
+FORMAT = '[%(asctime)s] [%(levelname)s] %(message)s'
+logging.basicConfig(format=FORMAT, level=logging.INFO, datefmt='%m-%d-%Y %I:%M:%S')
+
 if __name__ == '__main__':
 
     args = vars(parser.parse_args())
     db_file = f"{args.get('db_path')}/vast.db"
-    print('db_file:', db_file)
     conn = sqlite3.connect(db_file)
 
     for table in tables:
@@ -64,7 +64,7 @@ if __name__ == '__main__':
             # check for duplicates
             dup = offers.id.duplicated(keep=False)
             if dup.any():
-                print(f'[{time_utc_now()}] [ERROR] duplicated id:')
+                logging.error('duplicated id:')
                 print('\t', offers[dup])
 
             machines = get_machines()
@@ -73,11 +73,11 @@ if __name__ == '__main__':
             # check for duplicates
             dup = machines.machine_id.duplicated(keep=False)
             if dup.any():
-                print(f'[{time_utc_now()}] [ERROR] duplicated machine_id:')
+                logging.error('duplicated machine_id:')
                 print('\t', machines[dup])
 
         except Exception as e:
-            print(f"[{time_utc_now()}] [ERROR] {e}")
+            logging.exception("[API] connection")
             sleep(TIMEOUT)
             continue
 
@@ -91,29 +91,29 @@ if __name__ == '__main__':
         timestamp = time_utc_now()
 
         if offers.timestamp.iloc[0] == last_timestamp:
-            print(f'[{timestamp}] [API] [WARN] snapshot already recorded {time() - start:.2f}s')
+            logging.warning(f'[API] snapshot already saved {time() - start:.2f}s')
             conn.close()
             sleep(TIMEOUT)
             continue
 
-        print(f'[{timestamp}] [API] request completed in {time() - start:.2f}s')
+        logging.info(f'[API] request completed in {time() - start:.2f}s')
 
         start = time()
 
         df_to_tmp_table(offers, 'tmp_offers', conn)
         df_to_tmp_table(machines, 'tmp_machines', conn)
-        print(f'[{timestamp}] [TMP_TABLES] created in {time_ms(time() - start)}ms')
+        logging.info(f'[TMP_TABLES] created in {time_ms(time() - start)}ms')
 
         for table in tables:
             start = time()
             rowcount = table.write_db(conn)
             # if rowcount > 0:
-            print(f'[{timestamp}] [{table.name.upper()}] {rowcount} rows updated in {time_ms(time() - start)}ms')
+            logging.info(f'[{table.name.upper()}] {rowcount} rows updated in {time_ms(time() - start)}ms')
 
         conn.commit()
         conn.close()
 
-        print(f'[{timestamp}] [TOTAL_DB] database updated in {time_ms(time() - start_total_db)}ms')
+        logging.info(f'[TOTAL_DB] database updated in {time_ms(time() - start_total_db)}ms')
         print('=' * 80)
 
         sleep(70)
