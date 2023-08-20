@@ -54,7 +54,7 @@ if __name__ == '__main__':
     rotating = RotatingFileHandler(log_file,
                                    maxBytes=1024*1024,
                                    backupCount=3)
-    logging.basicConfig(format=FORMAT, handlers=[rotating], level=logging.INFO, datefmt='%m-%d-%Y %I:%M:%S')
+    logging.basicConfig(format=FORMAT, handlers=[rotating], level=logging.INFO, datefmt='%d-%m-%Y %I:%M:%S')
 
     conn = sqlite3.connect(db_file)
 

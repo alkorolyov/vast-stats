@@ -7,7 +7,8 @@ YELLOW='\033[0;33m'
 NC='\033[0m' # No Color
 
 INSTALL_DIR="/opt/vast-stats"
-DB_DIR="/var/lib/vast-stats"
+DATA_DIR="/var/lib/vast-stats"
+
 USER="vast-stats"
 GROUP=$USER
 
@@ -23,9 +24,9 @@ cd /tmp
 git clone https://github.com/alkorolyov/vast-stats/
 cd vast-stats/
 
-echo "=> Create project dirs: $INSTALL_DIR $DB_DIR"
+echo "=> Create project dirs: $INSTALL_DIR $DATA_DIR"
 mkdir $INSTALL_DIR
-mkdir $DB_DIR
+mkdir $DATA_DIR
 
 echo "=> Create $USER user/group"
 useradd -rs /bin/false $USER -d $INSTALL_DIR
@@ -37,7 +38,7 @@ cp -f __init__.py $INSTALL_DIR
 cp -f main.py $INSTALL_DIR
 cp -rf src $INSTALL_DIR
 chown -R $USER:$GROUP $INSTALL_DIR
-chown -R $USER:$GROUP $DB_DIR
+chown -R $USER:$GROUP $DATA_DIR
 
 echo "=> Apt update"
 apt-get -qq update -y
@@ -49,7 +50,7 @@ apt-get -qq install python3-pip -y
 echo "=> Install pip requirements"
 sudo -u $USER python3 -m pip -q install -r requirements.txt
 
-echo "=> Create service config"
+echo "=> Create service"
 SERVICE_CONTENT="
 [Unit]
 Description=VastAi Stats Service
@@ -60,7 +61,7 @@ Type=simple
 User=$USER
 Group=$GROUP
 WorkingDirectory=$INSTALL_DIR
-ExecStart=python3 $INSTALL_DIR/main.py --db_path $DB_DIR
+ExecStart=python3 $INSTALL_DIR/main.py --db_path $DATA_DIR --log_path $DATA_DIR
 #Restart=on-failure
 
 [Install]
@@ -73,6 +74,7 @@ echo -e "$SERVICE_CONTENT" > /etc/systemd/system/$SERVICE_NAME.service
 echo "=> Start service"
 systemctl daemon-reload
 systemctl start $SERVICE_NAME
+sleep 1
 
 # check service status
 status=$(systemctl is-active $SERVICE_NAME)

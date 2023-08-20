@@ -1,8 +1,5 @@
-import sqlite3
-
 import requests
 import pandas as pd
-from dataclasses import dataclass
 
 from pandas import DataFrame
 from src.utils import np_min_chunk
@@ -357,3 +354,4 @@ class NewOnlineTS(OnlineTS):
 
 
         return rowcount
+
