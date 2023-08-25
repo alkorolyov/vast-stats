@@ -21,24 +21,32 @@ hardware        = Timeseries('hardware', 'machines', HARDWARE_COLS)
 cpu_ram         = Timeseries('cpu_ram', 'machines', ['cpu_ram'])
 disk            = Timeseries('disk', 'machines', ['disk_space'])
 eod             = Timeseries('eod', 'machines', EOD_COLS)
+inet            = Timeseries('inet', 'machines', ['inet_down', 'inet_up'])
 avg             = Timeseries('avg', 'machines', AVG_COLS)
 reliability     = Timeseries('reliability', 'machines', ['reliability'])
 cost            = Timeseries('cost', 'machines', COST_COLS)
 rent            = Timeseries('rent', 'offers', ['machine_id', 'rented'])
 
+# avg_tbls = {}
+# for col in AVG_COLS:
+#     avg_tbls[col] = Timeseries(col, 'machines', [col])
+
 tables = [
     host_machine, online, machine_split,
     hardware, cpu_ram, disk,
     eod, reliability,
-    cost, rent,
+    cost, rent, inet
     # avg,
 ]
+
+# tables += avg_tbls.values()
 
 pd.set_option('display.max_rows', 500)
 pd.set_option('display.max_columns', 50)
 
 # args parsing
 parser = argparse.ArgumentParser(description='Vast Stats Service')
+parser.add_argument('--verbose', '-v', action='store_true', default=False, help='Print output to console')
 parser.add_argument('--db_path', default='.', help='Database store path')
 parser.add_argument('--log_path', default='.', help='Log file store path')
 
@@ -48,6 +56,7 @@ if __name__ == '__main__':
     args = vars(parser.parse_args())
     db_file = f"{args.get('db_path')}/vast.db"
     log_file = f"{args.get('log_path')}/vast.log"
+    verbose = args.get('verbose')
 
     # logging
     FORMAT = '[%(asctime)s] [%(levelname)s] %(message)s'
