@@ -53,11 +53,16 @@ def get_tbl_info(name, conn) -> pd.DataFrame:
     return df.set_index('cid')
 
 
+def get_tbl_timespan(name, conn) -> pd.Timedelta:
+    first = conn.execute(f'SELECT timestamp FROM {name} LIMIT 1').fetchall()[0][0]
+    last = conn.execute(f'SELECT timestamp FROM {name} ORDER BY ROWID DESC LIMIT 1').fetchall()[0][0]
+    return pd.to_timedelta((last - first) * 1e9)
+
+
 def table_to_df(name, conn) -> pd.DataFrame:
     cols = get_tbl_info(name, conn)['name']
     return pd.DataFrame(conn.execute(f'SELECT * FROM {name}').fetchall(),
                         columns=cols)
-
 
 def np_group_by(raw: pd.DataFrame, value_col: str, ufunc):
     """

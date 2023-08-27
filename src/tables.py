@@ -1,8 +1,9 @@
 import requests
 import pandas as pd
+from typing import List
 
 from pandas import DataFrame
-from src.utils import np_min_chunk
+from src.utils import np_min_chunk, get_tbl_timespan, table_to_df
 
 offers_url = 'https://500.farm/vastai-exporter/offers'
 machines_url = 'https://500.farm/vastai-exporter/machines'
@@ -105,11 +106,34 @@ def _get_dtype(col_name: str) -> str:
     raise ValueError(f'Column name {col_name} not found in INTEGER or STRING column lists')
 
 
-class MapTable:
+class Table:
+    """
+    Base Class for SQL tables.
+    Each table has a name and must implement two methods,
+    init_db, write_db.
+    """
+    def __init__(self, name: str, cols: list = None):
+        self.name = name
+        self.value_cols = cols
+
+    def init_db(self, sql_conn):
+        """
+        General method to create new tables in database
+        """
+        pass
+
+    def write_db(self, sql_conn):
+        """
+        General method to write data to database
+        """
+        pass
+
+
+class MapTable(Table):
     def __init__(self, name: str, source: str, cols: list):
+        super().__init__(name, cols)
         if len(cols) != 2:
             raise ValueError(f'Table error: two columns expected, got {len(cols)}')
-        self.name = name
         self.prim_key = cols[0]
         self.sec_key = cols[1]
 
@@ -135,8 +159,24 @@ class MapTable:
         return rowcount
 
 
-class Timeseries:
+class Timeseries(Table):
+    """
+    A main class designed to efficiently store and manage time-series data in SQLite database.
+    It optimizes disk space utilization by retaining only updated values while omitting
+    unchanged ones. This optimization is achieved through the utilization of two distinct SQL tables:
+
+    - tbl_name_ts: This table captures the time-series data containing only the altered values.
+    - tbl_name_snp: This table holds the most recent snapshot of the time-series.
+
+    The process involves invoking the write_db() method. When this method is called, the new values
+    from the temporary table are compared against the latest snapshot. If any modifications are
+    detected, only the changes are recorded within the timeseries table, and the snapshot is updated.
+
+    This class presents an efficient solution for managing time-series data while minimizing the
+    storage footprint by concentrating solely on altered data points.
+    """
     def __init__(self, name: str, source: str, cols: list):
+        super().__init__(name, cols)
         if source == 'machines':
             self.key_col = 'machine_id'
             self.tmp_table = 'tmp_machines'
@@ -146,7 +186,6 @@ class Timeseries:
         else:
             raise ValueError(f'Table creation: source must be machines or offers, got {source}')
 
-        self.name = name
         self.cols = f"{', '.join([c for c in cols])}"
         self.t_cols = f"{', '.join([f't.{c}' for c in cols])}"
 
@@ -155,7 +194,7 @@ class Timeseries:
         self.timeseries = name + '_ts'
         self.snapshot = name + '_snp'
 
-        self.sql_select_updated = f'''
+        self.sql_select_altered = f'''
         SELECT t.{self.key_col}, {self.t_cols}, t.timestamp FROM {self.tmp_table} t
         WHERE 
             ({self.key_col}, {self.cols}) NOT IN 
@@ -174,8 +213,7 @@ class Timeseries:
              {self.key_col} INTEGER, 
              {self.cols_dtypes},
              timestamp INTEGER,
-             PRIMARY KEY ({self.key_col})) 
---              PRIMARY KEY ({self.key_col}, {self.cols}))
+             PRIMARY KEY ({self.key_col}))
         ''')
 
     def write_db(self, conn) -> int:
@@ -186,15 +224,90 @@ class Timeseries:
     def _insert_timeseries(self, conn):
         rowcount = conn.execute(f''' 
         INSERT INTO {self.timeseries} ({self.key_col}, {self.cols}, timestamp)
-        {self.sql_select_updated}
+        {self.sql_select_altered}
         ''').rowcount
         return rowcount
 
     def _update_snapshot(self, conn):
         conn.execute(f'''
         INSERT OR REPLACE INTO {self.snapshot} ({self.key_col}, {self.cols}, timestamp)
-        {self.sql_select_updated}
+        {self.sql_select_altered}
         ''')
+
+
+class MeanStd(Table):
+    def __init__(self, name: str, source: str, cols: list, period: str = '5 min'):
+        super().__init__(name, cols)
+        if source == 'machines':
+            self.key_col = 'machine_id'
+            self.tmp_table = 'tmp_machines'
+        elif source == 'offers':
+            self.key_col = 'id'
+            self.tmp_table = 'tmp_offers'
+        else:
+            raise ValueError(f'Table creation: source must be machines or offers, got {source}')
+
+        self.period = pd.to_timedelta(period)
+
+        self.cols = f"{', '.join([c for c in cols])}"
+        self.t_cols = f"{', '.join([f't.{c}' for c in cols])}"
+
+        self.cols_dtypes = f"{', '.join([f'{c} INTEGER' for c in cols])}"
+        self.cols_avg_std = f"{', '.join([f'{c}_avg REAL, {c}_std REAL' for c in cols])}"
+
+        self.timeseries = name + '_ts'  # average and std timeseries
+        self.snapshot = name + '_snp'   # raw data over defined period
+
+    def init_db(self, conn):
+        conn.execute(f''' 
+        CREATE TABLE IF NOT EXISTS {self.timeseries} (
+            {self.key_col} INTEGER, 
+            {self.cols_avg_std}, 
+            timestamp INTEGER) 
+        ''')
+        conn.execute(f''' 
+        CREATE TABLE IF NOT EXISTS {self.snapshot} (
+            {self.key_col} INTEGER, 
+            {self.cols_dtypes}, 
+            timestamp INTEGER) 
+        ''')
+
+    def _write_mean_std(self, conn):
+        # calculate mean, std
+        df = table_to_df(self.snapshot, conn)
+        cols = self.value_cols + [self.key_col]
+        mean_df = df[cols].groupby(self.key_col).mean()
+        std_df = df[cols].groupby(self.key_col).std()
+
+        df_ = pd.DataFrame(index=mean_df.index)
+        for col in self.value_cols:
+            df_[col + '_avg'] = mean_df[col]
+            df_[col + '_std'] = std_df[col]
+        df_['timestamp'] = df.timestamp.iloc[-1]
+
+        # write to sql
+        df_.to_sql(self.timeseries, conn, if_exists='append')
+
+    def _write_snapshot(self, conn) -> int:
+        return conn.execute(f'''        
+        INSERT INTO {self.snapshot}
+        SELECT {self.key_col}, {self.cols}, timestamp FROM {self.tmp_table} AS t
+        ''').rowcount
+
+    def _clear_snapshot(self, conn):
+        conn.execute(f'DELETE FROM {self.snapshot}')
+
+    def write_db(self, conn):
+        rowcount = self._write_snapshot(conn)
+
+        timespan = get_tbl_timespan(self.snapshot, conn)
+
+        if timespan > self.period:
+            self._write_mean_std(conn)
+            self._clear_snapshot(conn)
+
+        return rowcount
+
 
 
 class MachineTS(Timeseries):

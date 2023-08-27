@@ -7,46 +7,47 @@ from logging.handlers import RotatingFileHandler
 from time import sleep, time
 
 
-from src.tables import get_offers, get_machines, df_to_tmp_table, COST_COLS, HARDWARE_COLS, EOD_COLS, AVG_COLS, Timeseries, MapTable, OnlineTS, MachineTS
+from src.tables import get_offers, get_machines, df_to_tmp_table, COST_COLS, HARDWARE_COLS, EOD_COLS, AVG_COLS, Timeseries, MapTable, OnlineTS, MachineTS, MeanStd, NewOnlineTS
 from src.preprocess import preprocess
 from src.utils import time_ms, time_utc_now
 
-TIMEOUT = 20
+TIMEOUT = 70        # Timeout between requests
+RETRY_TIMEOUT = 20  # Timeout between unsuccessful attempts
+MAX_LOGSIZE = 1024*1024     # 1Mb
+LOGCOUNT = 3
 
 # Tables
 host_machine    = MapTable('host_machine_map', 'machines', ['machine_id', 'host_id'])
 online          = OnlineTS('online', 'host_machine_map')
+new_online      = NewOnlineTS('new_online', 'host_machine_map')
 machine_split   = MachineTS('machine_split', 'offers', ['machine_id', 'num_gpus'])
 hardware        = Timeseries('hardware', 'machines', HARDWARE_COLS)
 cpu_ram         = Timeseries('cpu_ram', 'machines', ['cpu_ram'])
 disk            = Timeseries('disk', 'machines', ['disk_space'])
 eod             = Timeseries('eod', 'machines', EOD_COLS)
 inet            = Timeseries('inet', 'machines', ['inet_down', 'inet_up'])
-avg             = Timeseries('avg', 'machines', AVG_COLS)
 reliability     = Timeseries('reliability', 'machines', ['reliability'])
 cost            = Timeseries('cost', 'machines', COST_COLS)
 rent            = Timeseries('rent', 'offers', ['machine_id', 'rented'])
+# avg             = Timeseries('avg', 'machines', AVG_COLS)
+avg             = MeanStd('avg', 'machines', AVG_COLS)
 
-# avg_tbls = {}
-# for col in AVG_COLS:
-#     avg_tbls[col] = Timeseries(col, 'machines', [col])
 
 tables = [
-    host_machine, online, machine_split,
+    host_machine, online, new_online, machine_split,
     hardware, cpu_ram, disk,
     eod, reliability,
-    cost, rent, inet
-    # avg,
+    cost, rent, inet,
+    avg,
 ]
 
-# tables += avg_tbls.values()
 
 pd.set_option('display.max_rows', 500)
 pd.set_option('display.max_columns', 50)
 
 # args parsing
 parser = argparse.ArgumentParser(description='Vast Stats Service')
-parser.add_argument('--verbose', '-v', action='store_true', default=False, help='Print output to console')
+parser.add_argument('--verbose', '-v', action='store_true', default=True, help='Print output to console')
 parser.add_argument('--db_path', default='.', help='Database store path')
 parser.add_argument('--log_path', default='.', help='Log file store path')
 
@@ -61,8 +62,8 @@ if __name__ == '__main__':
     # logging
     FORMAT = '[%(asctime)s] [%(levelname)s] %(message)s'
     rotating = RotatingFileHandler(log_file,
-                                   maxBytes=1024*1024,
-                                   backupCount=3)
+                                   maxBytes=MAX_LOGSIZE,
+                                   backupCount=LOGCOUNT)
     logging.basicConfig(format=FORMAT, handlers=[rotating], level=logging.INFO, datefmt='%d-%m-%Y %I:%M:%S')
 
     conn = sqlite3.connect(db_file)
@@ -83,8 +84,7 @@ if __name__ == '__main__':
             # check for duplicates
             dup = offers.id.duplicated(keep=False)
             if dup.any():
-                logging.error('duplicated id:')
-                print('\t', offers[dup])
+                logging.warning(f'duplicated id: \n{offers[dup]}')
 
             machines = get_machines()
             preprocess(machines)
@@ -92,12 +92,11 @@ if __name__ == '__main__':
             # check for duplicates
             dup = machines.machine_id.duplicated(keep=False)
             if dup.any():
-                logging.error('duplicated machine_id:')
-                print('\t', machines[dup])
+                logging.warning(f'duplicated machine_id: \n{machines[dup]}')
 
         except Exception as e:
             logging.exception("[API] connection")
-            sleep(TIMEOUT)
+            sleep(RETRY_TIMEOUT)
             continue
 
         start_total_db = time()
@@ -112,7 +111,7 @@ if __name__ == '__main__':
         if offers.timestamp.iloc[0] == last_timestamp:
             logging.warning(f'[API] snapshot already saved {time() - start:.2f}s')
             conn.close()
-            sleep(TIMEOUT)
+            sleep(RETRY_TIMEOUT)
             continue
 
         logging.info(f'[API] request completed in {time() - start:.2f}s')
@@ -126,13 +125,21 @@ if __name__ == '__main__':
         for table in tables:
             start = time()
             rowcount = table.write_db(conn)
-            # if rowcount > 0:
-            logging.info(f'[{table.name.upper()}] {rowcount} rows updated in {time_ms(time() - start)}ms')
+            msg = f'[{table.name.upper()}] {rowcount} rows updated in {time_ms(time() - start)}ms'
+            logging.info(msg)
+
+            if verbose:
+                print(msg)
 
         conn.commit()
         conn.close()
 
-        logging.info(f'[TOTAL_DB] database updated in {time_ms(time() - start_total_db)}ms')
+        msg = f'[TOTAL_DB] database updated in {time_ms(time() - start_total_db)}ms'
+        logging.info(msg)
         logging.info('=' * 80)
 
-        sleep(70)
+        if verbose:
+            print(msg)
+            print('=' * 80)
+
+        sleep(TIMEOUT)
