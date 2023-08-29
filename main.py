@@ -7,7 +7,7 @@ from logging.handlers import RotatingFileHandler
 from time import sleep, time
 
 
-from src.tables import get_offers, get_machines, df_to_tmp_table, COST_COLS, HARDWARE_COLS, EOD_COLS, AVG_COLS, Timeseries, MapTable, OnlineTS, MachineTS, MeanStd, NewOnlineTS
+from src.tables import get_offers, get_machines, df_to_tmp_table, COST_COLS, HARDWARE_COLS, EOD_COLS, AVG_COLS, Timeseries, MapTable, OnlineTS, MachineTS, AverageStd, NewOnlineTS
 from src.preprocess import preprocess
 from src.utils import time_ms, time_utc_now
 
@@ -30,7 +30,7 @@ reliability     = Timeseries('reliability', 'machines', ['reliability'])
 cost            = Timeseries('cost', 'machines', COST_COLS)
 rent            = Timeseries('rent', 'offers', ['machine_id', 'rented'])
 # avg             = Timeseries('avg', 'machines', AVG_COLS)
-avg             = MeanStd('avg', 'machines', AVG_COLS)
+avg             = AverageStd('avg', 'machines', AVG_COLS, period='30 min')
 
 
 tables = [

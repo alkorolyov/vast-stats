@@ -1,3 +1,4 @@
+import math
 import requests
 import pandas as pd
 from typing import List
@@ -114,7 +115,7 @@ class Table:
     """
     def __init__(self, name: str, cols: list = None):
         self.name = name
-        self.value_cols = cols
+        self.cols_list = cols
 
     def init_db(self, sql_conn):
         """
@@ -175,6 +176,18 @@ class Timeseries(Table):
     This class presents an efficient solution for managing time-series data while minimizing the
     storage footprint by concentrating solely on altered data points.
     """
+
+    # SQL helper strings
+    cols: str           # value columns string: 'col1, col2, ...'
+    t_cols: str         # 't.col1, t.col2, ...'
+    cols_dtypes: str    # 'col1 INTEGER, col2 TEXT ...'
+    key_col: str        # key column name
+    tmp_table: str      # source temp table name
+    select_altered: str # sql expression to select only altered values
+
+    timeseries: str     # table name for timeseries
+    snapshot: str       # table name for snapshot
+
     def __init__(self, name: str, source: str, cols: list):
         super().__init__(name, cols)
         if source == 'machines':
@@ -194,7 +207,7 @@ class Timeseries(Table):
         self.timeseries = name + '_ts'
         self.snapshot = name + '_snp'
 
-        self.sql_select_altered = f'''
+        self.select_altered = f'''
         SELECT t.{self.key_col}, {self.t_cols}, t.timestamp FROM {self.tmp_table} t
         WHERE 
             ({self.key_col}, {self.cols}) NOT IN 
@@ -224,47 +237,33 @@ class Timeseries(Table):
     def _insert_timeseries(self, conn):
         rowcount = conn.execute(f''' 
         INSERT INTO {self.timeseries} ({self.key_col}, {self.cols}, timestamp)
-        {self.sql_select_altered}
+        {self.select_altered}
         ''').rowcount
         return rowcount
 
     def _update_snapshot(self, conn):
         conn.execute(f'''
         INSERT OR REPLACE INTO {self.snapshot} ({self.key_col}, {self.cols}, timestamp)
-        {self.sql_select_altered}
+        {self.select_altered}
         ''')
 
 
-class MeanStd(Table):
+class AverageStd(Timeseries):
     def __init__(self, name: str, source: str, cols: list, period: str = '5 min'):
-        super().__init__(name, cols)
-        if source == 'machines':
-            self.key_col = 'machine_id'
-            self.tmp_table = 'tmp_machines'
-        elif source == 'offers':
-            self.key_col = 'id'
-            self.tmp_table = 'tmp_offers'
-        else:
-            raise ValueError(f'Table creation: source must be machines or offers, got {source}')
+        super().__init__(name, source, cols)
 
         self.period = pd.to_timedelta(period)
-
-        self.cols = f"{', '.join([c for c in cols])}"
-        self.t_cols = f"{', '.join([f't.{c}' for c in cols])}"
-
-        self.cols_dtypes = f"{', '.join([f'{c} INTEGER' for c in cols])}"
-        self.cols_avg_std = f"{', '.join([f'{c}_avg REAL, {c}_std REAL' for c in cols])}"
-
-        self.timeseries = name + '_ts'  # average and std timeseries
-        self.snapshot = name + '_snp'   # raw data over defined period
+        self.cols_avg_std = f"{', '.join([f'{c}_avg, {c}_std' for c in cols])}"
+        self.cols_avg_std_dtypes = f"{', '.join([f'{c}_avg INTEGER, {c}_std REAL' for c in cols])}"
 
     def init_db(self, conn):
         conn.execute(f''' 
         CREATE TABLE IF NOT EXISTS {self.timeseries} (
             {self.key_col} INTEGER, 
-            {self.cols_avg_std}, 
+            {self.cols_avg_std_dtypes}, 
             timestamp INTEGER) 
         ''')
+
         conn.execute(f''' 
         CREATE TABLE IF NOT EXISTS {self.snapshot} (
             {self.key_col} INTEGER, 
@@ -272,21 +271,67 @@ class MeanStd(Table):
             timestamp INTEGER) 
         ''')
 
+    def write_db(self, conn):
+        self._write_snapshot(conn)
+        timespan = get_tbl_timespan(self.snapshot, conn)
+
+        if timespan > self.period:
+            rowcount = self._write_mean_std(conn)
+            self._clear_snapshot(conn)
+            return rowcount
+
+        return 0
+
     def _write_mean_std(self, conn):
-        # calculate mean, std
-        df = table_to_df(self.snapshot, conn)
-        cols = self.value_cols + [self.key_col]
-        mean_df = df[cols].groupby(self.key_col).mean()
-        std_df = df[cols].groupby(self.key_col).std()
+        conn.create_function('sqrt', 1, math.sqrt)
+        avg_std_calc =f', \n\r'.join([
+            f'ROUND(AVG({c})),\n\r'
+            f'ROUND(sqrt(AVG({c} * {c}) - AVG({c}) * AVG({c})), 2)'
+            for c in self.cols_list
+        ])
 
-        df_ = pd.DataFrame(index=mean_df.index)
-        for col in self.value_cols:
-            df_[col + '_avg'] = mean_df[col]
-            df_[col + '_std'] = std_df[col]
-        df_['timestamp'] = df.timestamp.iloc[-1]
+        sql_expression = f'''
+        INSERT INTO {self.timeseries} (
+            {self.key_col},
+            {self.cols_avg_std},
+            timestamp
+        )
+        SELECT
+            {self.key_col}, 
+            {avg_std_calc},
+            timestamp
+        FROM {self.snapshot}
+        GROUP BY {self.key_col}
+        '''
 
-        # write to sql
-        df_.to_sql(self.timeseries, conn, if_exists='append')
+        # print(sql_expression)
+        rowcount = conn.execute(sql_expression)
+        return rowcount
+
+
+        # # calculate mean, std
+        # df = table_to_df(self.snapshot, conn)
+        # cols = self.cols_list + [self.key_col]
+        # mean_df = df[cols].groupby(self.key_col).mean()
+        # std_df = df[cols].groupby(self.key_col).std()
+        #
+        # for col in std_df:
+        #     mask = std_df[col].isna()
+        #     if mask.any():
+        #         print(df.loc[std_df[mask].index])
+        #         print(mean_df[mask])
+        #         print(std_df[mask])
+        #
+        # df_ = pd.DataFrame(index=mean_df.index)
+        # for col in self.cols_list:
+        #     df_[col + '_avg'] = mean_df[col]
+        #     df_[col + '_std'] = std_df[col]
+        # df_['timestamp'] = df.timestamp.iloc[-1]
+        #
+        #
+        #
+        # # write to sql
+        # df_.to_sql(self.timeseries, conn, if_exists='append')
 
     def _write_snapshot(self, conn) -> int:
         return conn.execute(f'''        
@@ -296,18 +341,6 @@ class MeanStd(Table):
 
     def _clear_snapshot(self, conn):
         conn.execute(f'DELETE FROM {self.snapshot}')
-
-    def write_db(self, conn):
-        rowcount = self._write_snapshot(conn)
-
-        timespan = get_tbl_timespan(self.snapshot, conn)
-
-        if timespan > self.period:
-            self._write_mean_std(conn)
-            self._clear_snapshot(conn)
-
-        return rowcount
-
 
 
 class MachineTS(Timeseries):

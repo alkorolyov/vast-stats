@@ -10,7 +10,7 @@ INSTALL_DIR="/opt/vast-stats"
 DATA_DIR="/var/lib/vast-stats"
 
 USER="vast-stats"
-GROUP=$USER
+GROUP="vast-stats"
 
 echo -e "=> ${GREEN}Start installation of Vast Stats service${NC}"
 
@@ -51,6 +51,7 @@ echo "=> Install pip requirements"
 sudo -u $USER python3 -m pip -q install -r requirements.txt
 
 echo "=> Create service"
+
 SERVICE_CONTENT="
 [Unit]
 Description=VastAi Stats Service
