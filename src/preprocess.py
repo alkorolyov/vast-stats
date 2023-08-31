@@ -97,16 +97,14 @@ def preprocess(raw: pd.DataFrame):
     # raw['cpu_ram_rnd'] = _round_ram(raw.cpu_ram)
     # raw['disk_space_rnd'] = raw.disk_space.round(-2).replace(0, 100)
     raw.pcie_bw = (raw.pcie_bw * 10).round()
-    raw.disk_bw = raw.disk_bw.round()
-    raw.gpu_mem_bw = raw.gpu_mem_bw.round()
 
     # scores
     raw.dlperf = (raw.dlperf * 1e2).round()
     raw.score = (raw.score * 1e2).round()
 
     # inet
-    raw.inet_down = raw.inet_down.round(-1).fillna(0)
-    raw.inet_up = raw.inet_up.round(-1).fillna(0)
+    raw.inet_down = raw.inet_down.round(-1)
+    raw.inet_up = raw.inet_up.round(-1)
 
     # End Of Day data
     raw.verification = raw.verification.map(VERIFIED_ENUM)

@@ -2,6 +2,7 @@ import math
 import requests
 import pandas as pd
 from typing import List
+from memory_profiler import profile
 
 from pandas import DataFrame
 from src.utils import np_min_chunk, get_tbl_timespan, table_to_df
@@ -92,7 +93,6 @@ def get_offers() -> DataFrame:
 
 def _get_raw(url) -> pd.DataFrame:
     r = requests.get(url)
-
     ts = int(pd.to_datetime(r.json()['timestamp']).timestamp())
     raw = pd.DataFrame(r.json()["offers"])
     raw['timestamp'] = ts
@@ -284,6 +284,7 @@ class AverageStd(Timeseries):
 
     def _write_mean_std(self, conn):
         conn.create_function('sqrt', 1, math.sqrt)
+
         avg_std_calc =f', \n\r'.join([
             f'ROUND(AVG({c})),\n\r'
             f'ROUND(sqrt(AVG({c} * {c}) - AVG({c}) * AVG({c})), 2)'
@@ -305,7 +306,7 @@ class AverageStd(Timeseries):
         '''
 
         # print(sql_expression)
-        rowcount = conn.execute(sql_expression)
+        rowcount = conn.execute(sql_expression).rowcount
         return rowcount
 
 

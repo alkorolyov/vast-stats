@@ -1,58 +1,57 @@
 #!/usr/bin/python3
+
 import argparse
 import sqlite3
+import numpy as np
 import pandas as pd
 import logging
 from logging.handlers import RotatingFileHandler
 from time import sleep, time
+from memory_profiler import profile
 
-
-from src.tables import get_offers, get_machines, df_to_tmp_table, COST_COLS, HARDWARE_COLS, EOD_COLS, AVG_COLS, Timeseries, MapTable, OnlineTS, MachineTS, AverageStd, NewOnlineTS
+from src.tables import get_offers, get_machines, df_to_tmp_table, COST_COLS, HARDWARE_COLS, EOD_COLS, AVG_COLS, \
+    Timeseries, MapTable, OnlineTS, MachineTS, AverageStd, NewOnlineTS
 from src.preprocess import preprocess
 from src.utils import time_ms, time_utc_now
 
-TIMEOUT = 70        # Timeout between requests
-RETRY_TIMEOUT = 20  # Timeout between unsuccessful attempts
-MAX_LOGSIZE = 1024*1024     # 1Mb
-LOGCOUNT = 3
+def main():
+    TIMEOUT = 70  # Timeout between requests
+    RETRY_TIMEOUT = 20  # Timeout between unsuccessful attempts
+    MAX_LOGSIZE = 1024 * 1024  # 1Mb
+    LOGCOUNT = 3
 
-# Tables
-host_machine    = MapTable('host_machine_map', 'machines', ['machine_id', 'host_id'])
-online          = OnlineTS('online', 'host_machine_map')
-new_online      = NewOnlineTS('new_online', 'host_machine_map')
-machine_split   = MachineTS('machine_split', 'offers', ['machine_id', 'num_gpus'])
-hardware        = Timeseries('hardware', 'machines', HARDWARE_COLS)
-cpu_ram         = Timeseries('cpu_ram', 'machines', ['cpu_ram'])
-disk            = Timeseries('disk', 'machines', ['disk_space'])
-eod             = Timeseries('eod', 'machines', EOD_COLS)
-inet            = Timeseries('inet', 'machines', ['inet_down', 'inet_up'])
-reliability     = Timeseries('reliability', 'machines', ['reliability'])
-cost            = Timeseries('cost', 'machines', COST_COLS)
-rent            = Timeseries('rent', 'offers', ['machine_id', 'rented'])
-# avg             = Timeseries('avg', 'machines', AVG_COLS)
-avg             = AverageStd('avg', 'machines', AVG_COLS, period='30 min')
+    # Tables
+    host_machine = MapTable('host_machine_map', 'machines', ['machine_id', 'host_id'])
+    online = OnlineTS('online', 'host_machine_map')
+    new_online = NewOnlineTS('new_online', 'host_machine_map')
+    machine_split = MachineTS('machine_split', 'offers', ['machine_id', 'num_gpus'])
+    hardware = Timeseries('hardware', 'machines', HARDWARE_COLS)
+    cpu_ram = Timeseries('cpu_ram', 'machines', ['cpu_ram'])
+    disk = Timeseries('disk', 'machines', ['disk_space'])
+    eod = Timeseries('eod', 'machines', EOD_COLS)
+    inet = Timeseries('inet', 'machines', ['inet_down', 'inet_up'])
+    reliability = Timeseries('reliability', 'machines', ['reliability'])
+    cost = Timeseries('cost', 'machines', COST_COLS)
+    rent = Timeseries('rent', 'offers', ['machine_id', 'rented'])
+    # avg             = Timeseries('avg', 'machines', AVG_COLS)
+    avg = AverageStd('avg', 'machines', AVG_COLS, period='30 min')
 
+    tables = [
+        host_machine, online, new_online, machine_split,
+        hardware, cpu_ram, disk,
+        eod, reliability,
+        cost, rent, inet,
+        avg,
+    ]
 
-tables = [
-    host_machine, online, new_online, machine_split,
-    hardware, cpu_ram, disk,
-    eod, reliability,
-    cost, rent, inet,
-    avg,
-]
+    # pd.set_option('display.max_rows', 500)
+    # pd.set_option('display.max_columns', 50)
 
-
-pd.set_option('display.max_rows', 500)
-pd.set_option('display.max_columns', 50)
-
-# args parsing
-parser = argparse.ArgumentParser(description='Vast Stats Service')
-parser.add_argument('--verbose', '-v', action='store_true', default=True, help='Print output to console')
-parser.add_argument('--db_path', default='.', help='Database store path')
-parser.add_argument('--log_path', default='.', help='Log file store path')
-
-
-if __name__ == '__main__':
+    # args parsing
+    parser = argparse.ArgumentParser(description='Vast Stats Service')
+    parser.add_argument('--verbose', '-v', action='store_true', default=True, help='Print output to console')
+    parser.add_argument('--db_path', default='.', help='Database store path')
+    parser.add_argument('--log_path', default='.', help='Log file store path')
 
     args = vars(parser.parse_args())
     db_file = f"{args.get('db_path')}/vast.db"
@@ -109,7 +108,10 @@ if __name__ == '__main__':
         timestamp = time_utc_now()
 
         if offers.timestamp.iloc[0] == last_timestamp:
-            logging.warning(f'[API] snapshot already saved {time() - start:.2f}s')
+            msg = f'[API] snapshot already saved {time() - start:.2f}s'
+            logging.warning(msg)
+            if verbose:
+                print(msg)
             conn.close()
             sleep(RETRY_TIMEOUT)
             continue
@@ -142,4 +144,10 @@ if __name__ == '__main__':
             print(msg)
             print('=' * 80)
 
+        # break
         sleep(TIMEOUT)
+
+
+if __name__ == '__main__':
+    main()
+
