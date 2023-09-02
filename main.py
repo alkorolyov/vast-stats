@@ -68,7 +68,7 @@ def main():
     # args parsing
     parser = argparse.ArgumentParser(description='Vast Stats Service')
     parser.add_argument('--verbose', '-v', action='store_true', default=False, help='Print output to console')
-    parser.add_argument('--no_log', action='store_true', default=False, help='Dont store log files')
+    # parser.add_argument('--no_log', action='store_true', default=False, help='Dont store log files')
     parser.add_argument('--db_path', default='.', help='Database store path')
     parser.add_argument('--log_path', default='.', help='Log file store path')
 
@@ -77,18 +77,21 @@ def main():
     db_file = f"{args.get('db_path')}/vast.db"
     log_file = f"{args.get('log_path')}/vast.log"
     verbose = args.get('verbose')
-    no_log = args.get('no_log')
+    # no_log = args.get('no_log')
 
     # logging
-    rotating = RotatingFileHandler(log_file,
-                                   maxBytes=MAX_LOGSIZE,
-                                   backupCount=LOG_COUNT)
+    log_handler = None
+    if not verbose:
+        rotating = RotatingFileHandler(log_file,
+                                       maxBytes=MAX_LOGSIZE,
+                                       backupCount=LOG_COUNT)
+        log_handler = [rotating]
+
     logging.basicConfig(format=LOG_FORMAT,
-                        handlers=[rotating],
+                        handlers=log_handler,
                         level=logging.INFO,
                         datefmt='%d-%m-%Y %I:%M:%S')
-    if no_log:
-        logging.disable(logging.CRITICAL)
+
 
     conn = sqlite3.connect(db_file)
 
@@ -135,8 +138,6 @@ def main():
         if offers.timestamp.iloc[0] == last_timestamp:
             msg = f'[API] snapshot already saved {time() - start:.2f}s'
             logging.warning(msg)
-            if verbose:
-                print(msg)
             conn.close()
             sleep(RETRY_TIMEOUT)
             continue
@@ -154,8 +155,6 @@ def main():
             rowcount = table.write_db(conn)
             msg = f'[{table.name.upper()}] {rowcount} rows updated in {time_ms(time() - start)}ms'
             logging.info(msg)
-            if verbose:
-                print(msg)
 
         conn.commit()
         conn.close()
@@ -163,9 +162,6 @@ def main():
         msg = f'[TOTAL_DB] database updated in {time_ms(time() - start_total_db)}ms'
         logging.info(msg)
         logging.info('=' * 80)
-        if verbose:
-            print(msg)
-            print('=' * 80)
 
         # break
         sleep(TIMEOUT)
