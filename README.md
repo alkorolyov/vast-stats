@@ -10,3 +10,4 @@ git clone https://github.com/alkorolyov/vast-stats; cd vast-stats; sudo bash ./i
 
 # download from gcloud
 gcloud compute scp {vm_instance_name}:/var/lib/vast-stats/vast.db vast.db
+gcloud compute scp free_ubn20:/var/lib/vast-stats/vast.db vast.db

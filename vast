@@ -1877,6 +1877,7 @@ def login(args):
     print(login_deprecated_message)
 """
 
+
 def main():
     parser.add_argument("--url", help="server REST api url", default=server_url_default)
     parser.add_argument("--raw", action="store_true", help="output machine-readable json");

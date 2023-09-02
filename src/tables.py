@@ -1,8 +1,6 @@
 import math
 import requests
 import pandas as pd
-from typing import List
-from memory_profiler import profile
 
 from pandas import DataFrame
 from src.utils import np_min_chunk, get_tbl_timespan, table_to_df
