@@ -17,6 +17,10 @@ def round_day(ts: pd.Series):
     return pd.to_datetime(ts*10**9).dt.round(freq='D').values.astype('int64') // 10**9
 
 
+def round_base(x: pd.Series, base=5):
+    return (base * (x.astype(float)/base).round()).astype(int)
+
+
 def is_sorted(arr):
     return np.all(arr[:-1] <= arr[1:])
 

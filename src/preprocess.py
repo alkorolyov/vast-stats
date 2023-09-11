@@ -4,7 +4,7 @@ from pandas.core.dtypes.common import is_integer_dtype, is_float_dtype, is_strin
 
 from src import tables
 # from src.tables import INT32_COLS, STR_COLS, DROP_COLS
-from src.utils import round_day
+from src.utils import round_day, round_base
 
 
 
@@ -156,13 +156,13 @@ def preprocess(raw: pd.DataFrame):
     raw.cpu_ram = (raw.cpu_ram / 1024).round()  # RAM in Gb
     # raw['cpu_ram_rnd'] = _round_ram(raw.cpu_ram)
     # raw['disk_space_rnd'] = raw.disk_space.round(-2).replace(0, 100)
-    raw.pcie_bw = (raw.pcie_bw * 10).round()
-    raw.gpu_mem_bw = raw.gpu_mem_bw.round(-1)
-    raw.disk_bw = raw.disk_bw.round(-2)
+    raw.pcie_bw = round_base(raw.pcie_bw * 10, base=5)
+    raw.gpu_mem_bw = raw.gpu_mem_bw.round(-2)
+    raw.disk_bw = round_base(raw.disk_bw, base=500)
 
     # scores
-    raw.dlperf = raw.dlperf.round()
-    raw.score = raw.score.round()
+    raw.dlperf = round_base(raw.dlperf, base=5)
+    raw.score = round_base(raw.score, base=5)
 
     # inet
     raw.inet_down = raw.inet_down.round(-1)

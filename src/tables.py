@@ -44,7 +44,9 @@ DROP_COLS = ['credit_balance', 'credit_discount', 'location', 'geolocation', 'bu
              'verified', 'host_run_time', 'cpu_cores_effective', 'gpu_frac', 'chunks']
 
 AVG_COLS = ['disk_bw', 'gpu_mem_bw', 'pcie_bw',
-            'dlperf', 'score']
+            'dlperf',
+            # 'score'
+            ]
 
 HARDWARE_COLS = ['compute_cap', 'total_flops',
                  'cpu_cores', 'cpu_name', 'has_avx',
