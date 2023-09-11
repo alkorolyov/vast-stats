@@ -1,9 +1,11 @@
 import math
 import requests
 import pandas as pd
+from typing import List
 
 from pandas import DataFrame
-from src.utils import np_min_chunk, get_tbl_timespan, table_to_df
+from src.utils import np_min_chunk
+from src.preprocess import split_raw, preprocess
 
 offers_url = 'https://500.farm/vastai-exporter/offers'
 machines_url = 'https://500.farm/vastai-exporter/machines'
@@ -36,7 +38,7 @@ INT32_COLS = ['has_avx', 'bw_nvlink', 'cpu_cores', 'cpu_ram', 'hosting_type', 'd
 STR_COLS = ['cpu_name', 'cuda_max_good', 'disk_name', 'driver_version',
             'gpu_name', 'mobo_name', 'public_ipaddr', 'country']
 
-DROP_COLS = ['credit_balance', 'credit_discount','location', 'geolocation', 'bundle_id',
+DROP_COLS = ['credit_balance', 'credit_discount', 'location', 'geolocation', 'bundle_id',
              'discount_rate', 'discounted_dph_total', 'discounted_hourly',
              'dlperf_per_dphtotal', 'duration', 'flops_per_dphtotal', 'start_date',
              'verified', 'host_run_time', 'cpu_cores_effective', 'gpu_frac', 'chunks']
@@ -73,9 +75,18 @@ def df_to_tmp_table(df, tbl_name, conn):
     conn.executemany(f"INSERT INTO {tbl_name} VALUES ({values})", df.values.tolist())
 
 
-def create_tmp_tables(offers: pd.DataFrame, conn):
-    pass
+def create_tmp_tables(conn):
+    raw = _get_raw(offers_url)
+    preprocess(raw)
+    machines, offers = split_raw(raw)
+    df_to_tmp_table(offers, 'tmp_offers', conn)
+    df_to_tmp_table(machines, 'tmp_machines', conn)
 
+
+def get_machines_offers():
+    raw = _get_raw(offers_url)
+    preprocess(raw)
+    return split_raw(raw)
 
 def get_machines() -> DataFrame:
     return _get_raw(machines_url)
@@ -83,14 +94,17 @@ def get_machines() -> DataFrame:
 
 def get_offers() -> DataFrame:
     raw = _get_raw(offers_url)
-    if raw is None:
-        return None
     df = np_min_chunk(raw).reset_index(drop=True)
     return df
 
 
 def _get_raw(url) -> pd.DataFrame:
-    r = requests.get(url)
+    r = requests.get(url, timeout=10)
+    r.raise_for_status()
+
+    if len(r.text) == 0:
+        raise requests.exceptions.RequestException('Empty response')
+
     ts = int(pd.to_datetime(r.json()['timestamp']).timestamp())
     raw = pd.DataFrame(r.json()["offers"])
     raw['timestamp'] = ts
@@ -111,6 +125,8 @@ class Table:
     Each table has a name and must implement two methods,
     init_db, write_db.
     """
+    name: str               # Table name
+    cols_list: List[str]    # list of column names
     def __init__(self, name: str, cols: list = None):
         self.name = name
         self.cols_list = cols
@@ -126,6 +142,28 @@ class Table:
         General method to write data to database
         """
         pass
+
+
+class Timestamp(Table):
+    def __init__(self, name):
+        super().__init__(name)
+        self.tmp_table = 'tmp_offers'
+
+    def init_db(self, conn):
+        conn.execute(f'''
+            CREATE TABLE IF NOT EXISTS {self.name} (
+            timestamp INTEGER,  
+            PRIMARY KEY (timestamp)
+            )
+        ''')
+
+    def write_db(self, conn):
+        rowcount = conn.execute(f'''
+        INSERT OR IGNORE INTO {self.name}
+        SELECT timestamp FROM {self.tmp_table}
+        LIMIT 1
+        ''').rowcount
+        return rowcount
 
 
 class MapTable(Table):
@@ -209,7 +247,7 @@ class Timeseries(Table):
         SELECT t.{self.key_col}, {self.t_cols}, t.timestamp FROM {self.tmp_table} t
         WHERE 
             ({self.key_col}, {self.cols}) NOT IN 
-            (SELECT {self.key_col}, {self.cols} FROM {self.snapshot})        
+            (SELECT {self.key_col}, {self.cols} FROM {self.snapshot})
         '''
 
     def init_db(self, conn):
@@ -500,3 +538,34 @@ class NewOnlineTS(OnlineTS):
 
         return rowcount
 
+
+def get_tables(conn) -> list:
+    res = conn.execute(f'''
+    SELECT
+        name
+    FROM
+           (SELECT * FROM sqlite_master UNION ALL
+            SELECT * FROM sqlite_temp_master)
+    WHERE
+        type ='table' AND
+        name NOT LIKE 'sqlite_%';
+    ''').fetchall()
+    return [x[0] for x in res]
+
+
+def get_tbl_info(name, conn) -> pd.DataFrame:
+    df = pd.DataFrame(conn.execute(f'PRAGMA table_info({name})').fetchall(),
+                      columns=['cid', 'name', 'type', 'notnull', 'dflt_value', 'pk'])
+    return df.set_index('cid')
+
+
+def get_tbl_timespan(name, conn) -> pd.Timedelta:
+    first = conn.execute(f'SELECT timestamp FROM {name} LIMIT 1').fetchall()[0][0]
+    last = conn.execute(f'SELECT timestamp FROM {name} ORDER BY ROWID DESC LIMIT 1').fetchall()[0][0]
+    return pd.to_timedelta((last - first) * 1e9)
+
+
+def table_to_df(name, conn) -> pd.DataFrame:
+    cols = get_tbl_info(name, conn)['name']
+    return pd.DataFrame(conn.execute(f'SELECT * FROM {name}').fetchall(),
+                        columns=cols)

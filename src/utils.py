@@ -1,5 +1,8 @@
+import gc
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
+from pandas.core.dtypes.common import is_integer_dtype, is_float_dtype, is_numeric_dtype
 
 
 def time_ms(time_sec: float):
@@ -33,36 +36,15 @@ def df_na_vals(df, return_empty=True):
         return empty
 
 
-def get_tables(conn) -> list:
-    res = conn.execute(f'''
-    SELECT
-        name
-    FROM
-           (SELECT * FROM sqlite_master UNION ALL
-            SELECT * FROM sqlite_temp_master)
-    WHERE
-        type ='table' AND
-        name NOT LIKE 'sqlite_%';
-    ''').fetchall()
-    return [x[0] for x in res]
+def np_argmax_reduceat(vals, slice_idx):
+    n = vals.max() + 1
+    idx_arr = np.zeros(vals.size, dtype=np.uint8)
+    idx_arr[slice_idx] = 1
+    offset = n * idx_arr.cumsum()
+    argidx = np.argsort(vals + offset)
+    last_grp_idx = np.append(slice_idx[1:], vals.size) - 1
+    return argidx[last_grp_idx]
 
-
-def get_tbl_info(name, conn) -> pd.DataFrame:
-    df = pd.DataFrame(conn.execute(f'PRAGMA table_info({name})').fetchall(),
-                      columns=['cid', 'name', 'type', 'notnull', 'dflt_value', 'pk'])
-    return df.set_index('cid')
-
-
-def get_tbl_timespan(name, conn) -> pd.Timedelta:
-    first = conn.execute(f'SELECT timestamp FROM {name} LIMIT 1').fetchall()[0][0]
-    last = conn.execute(f'SELECT timestamp FROM {name} ORDER BY ROWID DESC LIMIT 1').fetchall()[0][0]
-    return pd.to_timedelta((last - first) * 1e9)
-
-
-def table_to_df(name, conn) -> pd.DataFrame:
-    cols = get_tbl_info(name, conn)['name']
-    return pd.DataFrame(conn.execute(f'SELECT * FROM {name}').fetchall(),
-                        columns=cols)
 
 def np_group_by(raw: pd.DataFrame, value_col: str, ufunc):
     """
@@ -80,7 +62,9 @@ def np_group_by(raw: pd.DataFrame, value_col: str, ufunc):
         machine_ids = machine_ids[idx]
         vals = vals[idx]
 
-    slice_idx = np.r_[0, np.flatnonzero(np.diff(machine_ids)) + 1]
+    # slice_idx = np.r_[0, np.flatnonzero(np.diff(machine_ids)) + 1]
+    slice_idx = np.diff(machine_ids).nonzero()[0] + 1
+    slice_idx = np.hstack([0, slice_idx])    # insert zero at the beginning of arr
     return machine_ids[slice_idx], ufunc.reduceat(vals, slice_idx)
 
 
@@ -88,12 +72,13 @@ def np_min_chunk(raw: pd.DataFrame) -> pd.DataFrame:
     lexidx = np.lexsort((raw.num_gpus.values, raw.machine_id.values))
 
     machine_ids, num_gpus = raw.machine_id.values[lexidx], raw.num_gpus.values[lexidx]
-    slice_idx = np.r_[0, np.flatnonzero(np.diff(machine_ids)) + 1]
+    slice_idx = np.diff(machine_ids).nonzero()[0] + 1
+    slice_idx = np.hstack([0, slice_idx])    # insert zero at the beginning of slice_idx
 
-    group_count = np.diff(np.concatenate([slice_idx, [len(machine_ids)]])) # groupby('machine_id').count()
+    group_count = np.diff(np.concatenate([slice_idx, [machine_ids.size]]))  # groupby('machine_id').count()
 
     min_chunk = num_gpus[slice_idx]
-    min_chunk_ex = np.repeat(min_chunk, group_count) # expanded min_chunk for each machine_id
+    min_chunk_ex = np.repeat(min_chunk, group_count)    # expanded min_chunk for each machine_id
     min_chunk_count = np.add.reduceat((min_chunk_ex == num_gpus), slice_idx)
 
     # correction for the case where whole machine size is not a multiple of min_chunk
@@ -131,3 +116,78 @@ def _pd_min_chunk(df: pd.DataFrame) -> pd.DataFrame:
     # filter undivided chunks
     undivided = df[df.num_gpus <= min_chunk]
     return undivided
+
+
+def _is_float_to_int(arr) -> bool:
+    return np.all(np.isclose(arr, np.round(arr)))
+
+
+def check_if_integer(series) -> bool:
+    if is_float_dtype(series.dtype):
+        return _is_float_to_int(series.values)
+    return False
+
+
+def reduce_mem_usage(df, int_cast=True, obj_to_category=False, subset=None, verbose=False):
+    """
+    Iterate through all the columns of a dataframe and modify the data type to reduce memory usage.
+    :param df: dataframe to reduce (pd.DataFrame)
+    :param int_cast: indicate if columns should be tried to be casted to int (bool)
+    :param obj_to_category: convert non-datetime related objects to category dtype (bool)
+    :param subset: subset of columns to analyse (list)
+    :return: dataset with the column dtypes adjusted (pd.DataFrame)
+    """
+    if verbose:
+        start_mem = df.memory_usage().sum() / 1024 ** 2
+        gc.collect()
+        print('Memory usage of dataframe is {:.2f} MB'.format(start_mem))
+
+    cols = subset if subset is not None else df.columns.tolist()
+
+    for col in tqdm(cols, disable=not verbose):
+        col_type = df[col].dtype
+
+        if is_numeric_dtype(col_type):
+            c_min = df[col].min()
+            c_max = df[col].max()
+
+            # test if column can be converted to an integer
+            treat_as_int = is_integer_dtype(col_type)
+            if int_cast and not treat_as_int:
+                treat_as_int = check_if_integer(df[col])
+
+            if treat_as_int:
+                if c_min > np.iinfo(np.int8).min and c_max < np.iinfo(np.int8).max:
+                    df[col] = df[col].astype(np.int8)
+                elif c_min > np.iinfo(np.uint8).min and c_max < np.iinfo(np.uint8).max:
+                    df[col] = df[col].astype(np.uint8)
+                elif c_min > np.iinfo(np.int16).min and c_max < np.iinfo(np.int16).max:
+                    df[col] = df[col].astype(np.int16)
+                elif c_min > np.iinfo(np.uint16).min and c_max < np.iinfo(np.uint16).max:
+                    df[col] = df[col].astype(np.uint16)
+                elif c_min > np.iinfo(np.int32).min and c_max < np.iinfo(np.int32).max:
+                    df[col] = df[col].astype(np.int32)
+                elif c_min > np.iinfo(np.uint32).min and c_max < np.iinfo(np.uint32).max:
+                    df[col] = df[col].astype(np.uint32)
+                elif c_min > np.iinfo(np.int64).min and c_max < np.iinfo(np.int64).max:
+                    df[col] = df[col].astype(np.int64)
+                elif c_min > np.iinfo(np.uint64).min and c_max < np.iinfo(np.uint64).max:
+                    df[col] = df[col].astype(np.uint64)
+            else:
+                if c_min > np.finfo(np.float16).min and c_max < np.finfo(np.float16).max:
+                    df[col] = df[col].astype(np.float16)
+                elif c_min > np.finfo(np.float32).min and c_max < np.finfo(np.float32).max:
+                    df[col] = df[col].astype(np.float32)
+                else:
+                    df[col] = df[col].astype(np.float64)
+        # elif 'datetime' not in col_type.name and obj_to_category:
+        #     df[col] = df[col].astype('category')
+
+    if verbose:
+        gc.collect()
+        end_mem = df.memory_usage().sum() / 1024 ** 2
+        print('Memory usage after optimization is: {:.3f} MB'.format(end_mem))
+        print('Decreased by {:.1f}%'.format(100 * (start_mem - end_mem) / start_mem))
+
+    return df
+

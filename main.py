@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import requests
 import argparse
 import sqlite3
 import pandas as pd
@@ -8,9 +9,9 @@ from logging.handlers import RotatingFileHandler
 from time import sleep, time
 # from memory_profiler import profile
 
-from src.tables import get_offers, get_machines, df_to_tmp_table, COST_COLS, HARDWARE_COLS, EOD_COLS, AVG_COLS, \
-    Timeseries, MapTable, OnlineTS, MachineTS, AverageStd, NewOnlineTS
-from src.preprocess import preprocess
+from src.tables import get_offers, get_machines, get_machines_offers, df_to_tmp_table, COST_COLS, HARDWARE_COLS, EOD_COLS, AVG_COLS, \
+    Timeseries, MapTable, Timestamp, OnlineTS, MachineTS, AverageStd
+from src.preprocess import preprocess, split_raw
 from src.utils import time_ms, time_utc_now
 
 pd.set_option('display.max_rows', 500)
@@ -39,7 +40,8 @@ def main():
     # eod = Timeseries('eod', 'machines', EOD_COLS)
     # inet = Timeseries('inet', 'machines', ['inet_down', 'inet_up'])
     # cost = Timeseries('cost', 'machines', COST_COLS)
-    avg = AverageStd('avg', 'machines', AVG_COLS, period='1 h')
+    # avg = AverageStd('avg', 'machines', AVG_COLS, period='1 h')
+    ts = Timestamp('timestamp_tbl')
 
     tables = [
         host_machine, online,
@@ -52,7 +54,8 @@ def main():
         # cost,
         # inet,
         rent,
-        avg,
+        # avg,
+        ts
     ]
 
     for col in HARDWARE_COLS:
@@ -61,23 +64,22 @@ def main():
         tables.append(Timeseries(col, 'machines', [col]))
     for col in COST_COLS:
         tables.append(Timeseries(col, 'machines', [col]))
+    for col in AVG_COLS:
+        tables.append(Timeseries(col, 'machines', [col]))
+
     tables.append(Timeseries('inet_up', 'machines', ['inet_up']))
     tables.append(Timeseries('inet_down', 'machines', ['inet_down']))
 
-
     # args parsing
     parser = argparse.ArgumentParser(description='Vast Stats Service')
-    parser.add_argument('--verbose', '-v', action='store_true', default=False, help='Print output to console')
-    # parser.add_argument('--no_log', action='store_true', default=False, help='Dont store log files')
+    parser.add_argument('--verbose', '-v', action='store_true', default=True, help='Print to console or logfile')
     parser.add_argument('--db_path', default='.', help='Database store path')
     parser.add_argument('--log_path', default='.', help='Log file store path')
-
 
     args = vars(parser.parse_args())
     db_file = f"{args.get('db_path')}/vast.db"
     log_file = f"{args.get('log_path')}/vast.log"
     verbose = args.get('verbose')
-    # no_log = args.get('no_log')
 
     # logging
     log_handler = None
@@ -92,7 +94,6 @@ def main():
                         level=logging.INFO,
                         datefmt='%d-%m-%Y %I:%M:%S')
 
-
     conn = sqlite3.connect(db_file)
 
     for table in tables:
@@ -105,26 +106,35 @@ def main():
         start = time()
 
         try:
-            offers = get_offers()
-            preprocess(offers)
 
-            # check for duplicates
-            dup = offers.id.duplicated(keep=False)
-            if dup.any():
-                logging.warning(f'duplicated id: \n{offers[dup]}')
+            machines, offers = get_machines_offers()
 
-            machines = get_machines()
-            preprocess(machines)
+            # offers = get_offers()
+            # preprocess(offers)
+            #
+            # # check for duplicates
+            # dup = offers.id.duplicated(keep=False)
+            # if dup.any():
+            #     logging.warning(f'duplicated id: \n{offers[dup]}')
+            #
+            # machines = get_machines()
+            # preprocess(machines)
+            #
+            # # check for duplicates
+            # dup = machines.machine_id.duplicated(keep=False)
+            # if dup.any():
+            #     logging.warning(f'duplicated machine_id: \n{machines[dup]}')
 
-            # check for duplicates
-            dup = machines.machine_id.duplicated(keep=False)
-            if dup.any():
-                logging.warning(f'duplicated machine_id: \n{machines[dup]}')
-
-        except Exception as e:
-            logging.exception("[API] connection")
+        except requests.exceptions.Timeout:
+            logging.exception("[API] CONNECTION TIMEOUT")
             sleep(RETRY_TIMEOUT)
             continue
+        except requests.exceptions.RequestException:
+            logging.exception("[API] REQUEST ERROR")
+            sleep(RETRY_TIMEOUT)
+            continue
+        except Exception:
+            logging.exception("[API] GENERAL EXCEPTION")
 
         start_total_db = time()
 

@@ -2,8 +2,7 @@ import sqlite3
 import pytest
 import pandas as pd
 
-from src.tables import MapTable, df_to_tmp_table
-from src.utils import get_tables, get_tbl_info, table_to_df
+from src.tables import MapTable, df_to_tmp_table, get_tables, get_tbl_info, table_to_df
 
 
 # Fixture to create and connect to the test database
