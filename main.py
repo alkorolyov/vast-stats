@@ -92,10 +92,10 @@ def main():
                                        backupCount=LOG_COUNT)
         log_handler = [rotating]
 
-        logging.basicConfig(format=LOG_FORMAT,
-                            handlers=log_handler,
-                            level=logging.INFO,
-                            datefmt='%d-%m-%Y %I:%M:%S')
+    logging.basicConfig(format=LOG_FORMAT,
+                        handlers=log_handler,
+                        level=logging.INFO,
+                        datefmt='%d-%m-%Y %I:%M:%S')
 
     print('Init tables') if verbose else None
 
@@ -110,6 +110,7 @@ def main():
     while True:
         start = time()
         try:
+            print('[API] request started')
             machines, offers = get_machines_offers()
 
             # offers = get_offers()
@@ -129,18 +130,19 @@ def main():
             #     logging.warning(f'duplicated machine_id: \n{machines[dup]}')
 
         except requests.exceptions.Timeout as e:
-            logging.exception("[API] CONNECTION TIMEOUT")
             print(e) if verbose else None
+            logging.exception("[API] CONNECTION TIMEOUT")
             sleep(RETRY_TIMEOUT)
             continue
         except requests.exceptions.RequestException as e:
-            logging.exception("[API] REQUEST ERROR")
             print(e) if verbose else None
+            logging.exception("[API] REQUEST ERROR")
             sleep(RETRY_TIMEOUT)
             continue
         except Exception as e:
-            logging.exception("[API] GENERAL EXCEPTION")
             print(e) if verbose else None
+            logging.exception("[API] GENERAL EXCEPTION")
+
 
         start_total_db = time()
 
