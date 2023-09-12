@@ -32,10 +32,10 @@ echo "=> Create $USER user/group"
 useradd -rs /bin/false $USER -d $INSTALL_DIR
 
 echo "=> Copy sources to $INSTALL_DIR"
-cp -f requirements.txt $INSTALL_DIR
+cp -rf requirements.txt $INSTALL_DIR
 
-cp -f __init__.py $INSTALL_DIR
-cp -f main.py $INSTALL_DIR
+cp -rf __init__.py $INSTALL_DIR
+cp -rf main.py $INSTALL_DIR
 cp -rf src $INSTALL_DIR
 chown -R $USER:$GROUP $INSTALL_DIR
 chown -R $USER:$GROUP $DATA_DIR
@@ -75,7 +75,7 @@ echo -e "$SERVICE_CONTENT" > /etc/systemd/system/$SERVICE_NAME.service
 echo "=> Start service"
 systemctl daemon-reload
 systemctl start $SERVICE_NAME
-sleep 1
+sleep 5
 
 # check service status
 status=$(systemctl is-active $SERVICE_NAME)

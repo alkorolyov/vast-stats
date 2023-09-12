@@ -1,5 +1,4 @@
 #!/usr/bin/python3
-
 import requests
 import argparse
 import sqlite3
@@ -142,7 +141,7 @@ def main():
 
         conn = sqlite3.connect(db_file)
 
-        output = conn.execute('SELECT timestamp FROM reliability_ts ORDER BY ROWID DESC LIMIT 1').fetchall()
+        output = conn.execute('SELECT timestamp FROM timestamp_tbl ORDER BY ROWID DESC LIMIT 1').fetchall()
         last_timestamp = output[0][0] if output else 0
 
         # timestamp = time_utc_now()
