@@ -26,6 +26,19 @@ LOG_COUNT = 3
 
 
 def main():
+    # args parsing
+    parser = argparse.ArgumentParser(description='Vast Stats Service')
+    parser.add_argument('--verbose', '-v', action='store_true', default=True, help='Print to console or logfile')
+    parser.add_argument('--db_path', default='.', help='Database store path')
+    parser.add_argument('--log_path', default='.', help='Log file store path')
+
+    args = vars(parser.parse_args())
+    db_file = f"{args.get('db_path')}/vast.db"
+    log_file = f"{args.get('log_path')}/vast.log"
+    verbose = args.get('verbose')
+
+    print('Main process start') if verbose else None
+
     # Single Value Tables
     host_machine = MapTable('host_machine_map', 'machines', ['machine_id', 'host_id'])
     online = OnlineTS('online', 'host_machine_map')
@@ -71,17 +84,6 @@ def main():
     tables.append(Timeseries('inet_up', 'machines', ['inet_up']))
     tables.append(Timeseries('inet_down', 'machines', ['inet_down']))
 
-    # args parsing
-    parser = argparse.ArgumentParser(description='Vast Stats Service')
-    parser.add_argument('--verbose', '-v', action='store_true', default=True, help='Print to console or logfile')
-    parser.add_argument('--db_path', default='.', help='Database store path')
-    parser.add_argument('--log_path', default='.', help='Log file store path')
-
-    args = vars(parser.parse_args())
-    db_file = f"{args.get('db_path')}/vast.db"
-    log_file = f"{args.get('log_path')}/vast.log"
-    verbose = args.get('verbose')
-
     # logging
     log_handler = None
     if not verbose:
@@ -90,10 +92,12 @@ def main():
                                        backupCount=LOG_COUNT)
         log_handler = [rotating]
 
-    logging.basicConfig(format=LOG_FORMAT,
-                        handlers=log_handler,
-                        level=logging.INFO,
-                        datefmt='%d-%m-%Y %I:%M:%S')
+        logging.basicConfig(format=LOG_FORMAT,
+                            handlers=log_handler,
+                            level=logging.INFO,
+                            datefmt='%d-%m-%Y %I:%M:%S')
+
+    print('Init tables') if verbose else None
 
     conn = sqlite3.connect(db_file)
 
@@ -105,9 +109,7 @@ def main():
 
     while True:
         start = time()
-
         try:
-
             machines, offers = get_machines_offers()
 
             # offers = get_offers()
@@ -176,7 +178,7 @@ def main():
         conn.close()
 
         msg = f'[TOTAL_DB] database updated in {time_ms(time() - start_total_db)}ms'
-        print(msg) if verbose else None
+        print(msg, '\n', '=' * 80) if verbose else None
         logging.info(msg)
         logging.info('=' * 80)
 
