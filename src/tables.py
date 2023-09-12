@@ -105,6 +105,7 @@ def _get_raw(url) -> pd.DataFrame:
     r.raise_for_status()
 
     if len(r.text) == 0:
+        print('Empty response')
         raise requests.exceptions.RequestException('Empty response')
 
     ts = int(pd.to_datetime(r.json()['timestamp']).timestamp())

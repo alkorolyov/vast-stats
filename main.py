@@ -37,7 +37,7 @@ def main():
     log_file = f"{args.get('log_path')}/vast.log"
     verbose = args.get('verbose')
 
-    print('Main process start') if verbose else None
+    print('[MAIN] Process start') if verbose else None
 
     # Single Value Tables
     host_machine = MapTable('host_machine_map', 'machines', ['machine_id', 'host_id'])
@@ -97,7 +97,7 @@ def main():
                         level=logging.INFO,
                         datefmt='%d-%m-%Y %I:%M:%S')
 
-    print('Init tables') if verbose else None
+    print('[MAIN] Init tables') if verbose else None
 
     conn = sqlite3.connect(db_file)
 
