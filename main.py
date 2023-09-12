@@ -9,7 +9,8 @@ from logging.handlers import RotatingFileHandler
 from time import sleep, time
 # from memory_profiler import profile
 
-from src.tables import get_offers, get_machines, get_machines_offers, df_to_tmp_table, COST_COLS, HARDWARE_COLS, EOD_COLS, AVG_COLS, \
+from src.tables import get_offers, get_machines, get_machines_offers, df_to_tmp_table, COST_COLS, HARDWARE_COLS, \
+    EOD_COLS, AVG_COLS, \
     Timeseries, MapTable, Timestamp, OnlineTS, MachineTS, AverageStd
 from src.preprocess import preprocess, split_raw
 from src.utils import time_ms, time_utc_now
@@ -125,16 +126,19 @@ def main():
             # if dup.any():
             #     logging.warning(f'duplicated machine_id: \n{machines[dup]}')
 
-        except requests.exceptions.Timeout:
+        except requests.exceptions.Timeout as e:
             logging.exception("[API] CONNECTION TIMEOUT")
+            print(e) if verbose else None
             sleep(RETRY_TIMEOUT)
             continue
-        except requests.exceptions.RequestException:
+        except requests.exceptions.RequestException as e:
             logging.exception("[API] REQUEST ERROR")
+            print(e) if verbose else None
             sleep(RETRY_TIMEOUT)
             continue
-        except Exception:
+        except Exception as e:
             logging.exception("[API] GENERAL EXCEPTION")
+            print(e) if verbose else None
 
         start_total_db = time()
 
@@ -148,6 +152,7 @@ def main():
         if offers.timestamp.iloc[0] == last_timestamp:
             msg = f'[API] snapshot already saved {time() - start:.2f}s'
             logging.warning(msg)
+            print(msg) if verbose else None
             conn.close()
             sleep(RETRY_TIMEOUT)
             continue
@@ -164,12 +169,14 @@ def main():
             start = time()
             rowcount = table.write_db(conn)
             msg = f'[{table.name.upper()}] {rowcount} rows updated in {time_ms(time() - start)}ms'
+            print(msg) if verbose else None
             logging.info(msg)
 
         conn.commit()
         conn.close()
 
         msg = f'[TOTAL_DB] database updated in {time_ms(time() - start_total_db)}ms'
+        print(msg) if verbose else None
         logging.info(msg)
         logging.info('=' * 80)
 
@@ -179,4 +186,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

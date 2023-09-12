@@ -1,7 +1,6 @@
 import gc
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
 from pandas.core.dtypes.common import is_integer_dtype, is_float_dtype, is_numeric_dtype
 
 
@@ -148,7 +147,7 @@ def reduce_mem_usage(df, int_cast=True, obj_to_category=False, subset=None, verb
 
     cols = subset if subset is not None else df.columns.tolist()
 
-    for col in tqdm(cols, disable=not verbose):
+    for col in cols:
         col_type = df[col].dtype
 
         if is_numeric_dtype(col_type):
