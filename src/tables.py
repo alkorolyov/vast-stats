@@ -101,12 +101,8 @@ def get_offers() -> DataFrame:
 
 
 def _get_raw(url) -> pd.DataFrame:
-    r = requests.get(url, timeout=10)
+    r = requests.get(url, timeout=5)
     r.raise_for_status()
-
-    if len(r.text) == 0:
-        print('Empty response')
-        raise requests.exceptions.RequestException('Empty response')
 
     ts = int(pd.to_datetime(r.json()['timestamp']).timestamp())
     raw = pd.DataFrame(r.json()["offers"])

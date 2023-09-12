@@ -28,7 +28,7 @@ LOG_COUNT = 3
 def main():
     # args parsing
     parser = argparse.ArgumentParser(description='Vast Stats Service')
-    parser.add_argument('--verbose', '-v', action='store_true', default=True, help='Print to console or logfile')
+    parser.add_argument('--verbose', '-v', action='store_true', default=False, help='Print to console or logfile')
     parser.add_argument('--db_path', default='.', help='Database store path')
     parser.add_argument('--log_path', default='.', help='Log file store path')
 
@@ -36,8 +36,6 @@ def main():
     db_file = f"{args.get('db_path')}/vast.db"
     log_file = f"{args.get('log_path')}/vast.log"
     verbose = args.get('verbose')
-
-    print('[MAIN] Process start') if verbose else None
 
     # Single Value Tables
     host_machine = MapTable('host_machine_map', 'machines', ['machine_id', 'host_id'])
@@ -97,7 +95,7 @@ def main():
                         level=logging.INFO,
                         datefmt='%d-%m-%Y %I:%M:%S')
 
-    print('[MAIN] Init tables') if verbose else None
+    logging.info('[MAIN] init tables')
 
     conn = sqlite3.connect(db_file)
 
@@ -110,7 +108,7 @@ def main():
     while True:
         start = time()
         try:
-            print('[API] request started')
+            logging.info('[API] request started')
             machines, offers = get_machines_offers()
 
             # offers = get_offers()
@@ -129,20 +127,16 @@ def main():
             # if dup.any():
             #     logging.warning(f'duplicated machine_id: \n{machines[dup]}')
 
-        except requests.exceptions.Timeout as e:
-            print(e) if verbose else None
+        except requests.exceptions.Timeout:
             logging.exception("[API] CONNECTION TIMEOUT")
             sleep(RETRY_TIMEOUT)
             continue
-        except requests.exceptions.RequestException as e:
-            print(e) if verbose else None
+        except requests.exceptions.RequestException:
             logging.exception("[API] REQUEST ERROR")
             sleep(RETRY_TIMEOUT)
             continue
-        except Exception as e:
-            print(e) if verbose else None
+        except Exception:
             logging.exception("[API] GENERAL EXCEPTION")
-
 
         start_total_db = time()
 
@@ -154,9 +148,7 @@ def main():
         # timestamp = time_utc_now()
 
         if offers.timestamp.iloc[0] == last_timestamp:
-            msg = f'[API] snapshot already saved {time() - start:.2f}s'
-            logging.warning(msg)
-            print(msg) if verbose else None
+            logging.warning(f'[API] snapshot already saved {time() - start:.2f}s')
             conn.close()
             sleep(RETRY_TIMEOUT)
             continue
@@ -172,16 +164,12 @@ def main():
         for table in tables:
             start = time()
             rowcount = table.write_db(conn)
-            msg = f'[{table.name.upper()}] {rowcount} rows updated in {time_ms(time() - start)}ms'
-            print(msg) if verbose else None
-            logging.info(msg)
+            logging.info(f'[{table.name.upper()}] {rowcount} rows updated in {time_ms(time() - start)}ms')
 
         conn.commit()
         conn.close()
 
-        msg = f'[TOTAL_DB] database updated in {time_ms(time() - start_total_db)}ms'
-        print(msg, '\n', '=' * 80) if verbose else None
-        logging.info(msg)
+        logging.info(f'[TOTAL_DB] database updated in {time_ms(time() - start_total_db)}ms')
         logging.info('=' * 80)
 
         # break
