@@ -27,7 +27,7 @@ LOG_COUNT = 3
 def main():
     # args parsing
     parser = argparse.ArgumentParser(description='Vast Stats Service')
-    parser.add_argument('--verbose', '-v', action='store_true', default=True, help='Print to console or logfile')
+    parser.add_argument('--verbose', '-v', action='store_true', default=False, help='Print to console or logfile')
     parser.add_argument('--db_path', default='.', help='Database store path')
     parser.add_argument('--log_path', default='.', help='Log file store path')
 
