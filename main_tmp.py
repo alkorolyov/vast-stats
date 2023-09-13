@@ -15,14 +15,14 @@ TIMEOUT = 20
 host_machine = MapTable('host_machine_map', 'machines', ['machine_id', 'host_id'])
 online = NewOnlineTS('online', 'host_machine_map')
 machine_split = MachineTS('machine_split', 'offers', ['machine_id', 'num_gpus'])
-hardware = Timeseries('hardware', 'machines', HARDWARE_COLS)
-cpu_ram = Timeseries('cpu_ram', 'machines', ['cpu_ram'])
-disk = Timeseries('disk', 'machines', ['disk_space'])
-eod = Timeseries('eod', 'machines', EOD_COLS)
-avg = Timeseries('avg', 'machines', AVG_COLS)
-reliability = Timeseries('reliability', 'machines', ['reliability'])
-cost = Timeseries('cost', 'offers', COST_COLS)
-rent = Timeseries('rent', 'offers', ['rented'])
+hardware = Timeseries('hardware', HARDWARE_COLS, 'machines')
+cpu_ram = Timeseries('cpu_ram', ['cpu_ram'], 'machines')
+disk = Timeseries('disk', ['disk_space'], 'machines')
+eod = Timeseries('eod', EOD_COLS, 'machines')
+avg = Timeseries('avg', AVG_COLS, 'machines')
+reliability = Timeseries('reliability', ['reliability'], 'machines')
+cost = Timeseries('cost', COST_COLS, 'offers')
+rent = Timeseries('rent', ['rented'], 'offers')
 
 tables = [
     host_machine, online, machine_split,

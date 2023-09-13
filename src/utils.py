@@ -20,6 +20,27 @@ def round_base(x: pd.Series, base=5):
     return (base * (x.astype(float)/base).round()).astype(int)
 
 
+def custom_round(x: pd.Series):
+    """
+    Custom round function for disk_bw:
+    x < 1000: round to 100
+    x in [1000, 4000]: round to 500
+    x > 4000: round to 1000
+    @param x:
+    @return: rounded series
+    """
+    res = x.copy()
+    mask = x < 1000
+    res[mask] = res[mask].round(-2)
+
+    mask = x.between(1000, 4000)
+    res[mask] = round_base(res[mask], 500)
+
+    mask = x > 4000
+    res[mask] = res[mask].round(-3)
+
+    return res
+
 def is_sorted(arr):
     return np.all(arr[:-1] <= arr[1:])
 

@@ -24,7 +24,7 @@ ALL_COLS = ['bundle_id', 'bw_nvlink', 'compute_cap', 'cpu_cores',
             'reliability2', 'rentable', 'score', 'start_date', 'storage_cost',
             'total_flops', 'verification', 'verified', 'timestamp']
 
-INT32_COLS = ['has_avx', 'bw_nvlink', 'cpu_cores', 'cpu_ram', 'hosting_type', 'disk_space',
+NUMERICAL = ['has_avx', 'bw_nvlink', 'cpu_cores', 'cpu_ram', 'hosting_type', 'disk_space',
               'dlperf', 'score', 'verification', 'reliability',
               'dph_base', 'storage_cost', 'inet_up_cost', 'inet_down_cost', 'min_bid', 'credit_discount_max',
               'total_flops', 'disk_bw', 'gpu_mem_bw', 'inet_down',
@@ -33,9 +33,9 @@ INT32_COLS = ['has_avx', 'bw_nvlink', 'cpu_cores', 'cpu_ram', 'hosting_type', 'd
               'gpu_display_active', 'gpu_lanes', 'gpu_ram', 'host_id',
               'machine_id', 'id', 'min_chunk', 'num_gpus', 'pci_gen',
               'num_gpus_rented', 'timestamp', 'dph_base',
-              ]
+             ]
 
-STR_COLS = ['cpu_name', 'cuda_max_good', 'disk_name', 'driver_version',
+CATEGORICAL = ['cpu_name', 'cuda_max_good', 'disk_name', 'driver_version',
             'gpu_name', 'mobo_name', 'public_ipaddr', 'country']
 
 DROP_COLS = ['credit_balance', 'credit_discount', 'location', 'geolocation', 'bundle_id',
@@ -45,7 +45,7 @@ DROP_COLS = ['credit_balance', 'credit_discount', 'location', 'geolocation', 'bu
 
 AVG_COLS = ['disk_bw', 'gpu_mem_bw', 'pcie_bw',
             'dlperf',
-            # 'score'
+            'score'
             ]
 
 HARDWARE_COLS = ['compute_cap', 'total_flops',
@@ -111,9 +111,9 @@ def _get_raw(url) -> pd.DataFrame:
 
 
 def _get_dtype(col_name: str) -> str:
-    if col_name in INT32_COLS:
+    if col_name in NUMERICAL:
         return 'INTEGER'
-    if col_name in STR_COLS:
+    if col_name in CATEGORICAL:
         return 'TEXT'
     raise ValueError(f'Column name {col_name} not found in INTEGER or STRING column lists')
 
@@ -197,7 +197,7 @@ class MapTable(Table):
 
 class Timeseries(Table):
     """
-    A main class designed to efficiently store and manage time-series data in SQLite database.
+    Main class designed to efficiently store and manage time-series data in SQLite database.
     It optimizes disk space utilization by retaining only updated values while omitting
     unchanged ones. This optimization is achieved through the utilization of two distinct SQL tables:
 
@@ -223,7 +223,7 @@ class Timeseries(Table):
     timeseries: str     # table name for timeseries
     snapshot: str       # table name for snapshot
 
-    def __init__(self, name: str, source: str, cols: list):
+    def __init__(self, name: str, cols: list, source: str = 'machines'):
         super().__init__(name, cols)
         if source == 'machines':
             self.key_col = 'machine_id'
@@ -285,7 +285,7 @@ class Timeseries(Table):
 
 class AverageStd(Timeseries):
     def __init__(self, name: str, source: str, cols: list, period: str = '5 min'):
-        super().__init__(name, source, cols)
+        super().__init__(name, cols, source)
 
         self.period = pd.to_timedelta(period)
         self.cols_avg_std = f"{', '.join([f'{c}_avg, {c}_std' for c in cols])}"

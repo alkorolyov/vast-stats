@@ -27,7 +27,7 @@ LOG_COUNT = 3
 def main():
     # args parsing
     parser = argparse.ArgumentParser(description='Vast Stats Service')
-    parser.add_argument('--verbose', '-v', action='store_true', default=False, help='Print to console or logfile')
+    parser.add_argument('--verbose', '-v', action='store_true', default=True, help='Print to console or logfile')
     parser.add_argument('--db_path', default='.', help='Database store path')
     parser.add_argument('--log_path', default='.', help='Log file store path')
 
@@ -40,18 +40,18 @@ def main():
     host_machine = MapTable('host_machine_map', 'machines', ['machine_id', 'host_id'])
     online = OnlineTS('online', 'host_machine_map')
     # new_online = NewOnlineTS('new_online', 'host_machine_map')
-    machine_split = MachineTS('machine_split', 'offers', ['machine_id', 'num_gpus'])
-    cpu_ram = Timeseries('cpu_ram', 'machines', ['cpu_ram'])
-    disk = Timeseries('disk', 'machines', ['disk_space'])
-    reliability = Timeseries('reliability', 'machines', ['reliability'])
-    rent = Timeseries('rent', 'offers', ['machine_id', 'rented'])
+    machine_split = MachineTS('machine_split', ['machine_id', 'num_gpus'], 'offers')
+    cpu_ram = Timeseries('cpu_ram', ['cpu_ram'])
+    disk = Timeseries('disk', ['disk_space'])
+    reliability = Timeseries('reliability', ['reliability'])
+    rent = Timeseries('rent', ['machine_id', 'rented'], 'offers')
 
     # Aggregated Tables
-    # hardware = Timeseries('hardware', 'machines', HARDWARE_COLS)
-    # eod = Timeseries('eod', 'machines', EOD_COLS)
-    # inet = Timeseries('inet', 'machines', ['inet_down', 'inet_up'])
-    # cost = Timeseries('cost', 'machines', COST_COLS)
-    # avg = AverageStd('avg', 'machines', AVG_COLS, period='1 h')
+    # hardware = Timeseries('hardware', HARDWARE_COLS)
+    # eod = Timeseries('eod', EOD_COLS)
+    # inet = Timeseries('inet', ['inet_down', 'inet_up'])
+    # cost = Timeseries('cost', COST_COLS)
+    # avg = AverageStd('avg', AVG_COLS, period='1 h')
     ts = Timestamp('timestamp_tbl')
 
     tables = [
@@ -70,16 +70,16 @@ def main():
     ]
 
     for col in HARDWARE_COLS:
-        tables.append(Timeseries(col, 'machines', [col]))
+        tables.append(Timeseries(col, [col]))
     for col in EOD_COLS:
-        tables.append(Timeseries(col, 'machines', [col]))
+        tables.append(Timeseries(col, [col]))
     for col in COST_COLS:
-        tables.append(Timeseries(col, 'machines', [col]))
+        tables.append(Timeseries(col, [col]))
     for col in AVG_COLS:
-        tables.append(Timeseries(col, 'machines', [col]))
+        tables.append(Timeseries(col, [col]))
 
-    tables.append(Timeseries('inet_up', 'machines', ['inet_up']))
-    tables.append(Timeseries('inet_down', 'machines', ['inet_down']))
+    tables.append(Timeseries('inet_up', ['inet_up']))
+    tables.append(Timeseries('inet_down', ['inet_down']))
 
     # logging
     log_handler = None
@@ -163,7 +163,8 @@ def main():
         for table in tables:
             start = time()
             rowcount = table.write_db(conn)
-            logging.info(f'[{table.name.upper()}] {rowcount} rows updated in {time_ms(time() - start)}ms')
+            if '_bw' in table.name or table.name == 'dlperf' or table.name == 'score':
+                logging.info(f'[{table.name.upper()}] {rowcount} rows updated in {time_ms(time() - start)}ms')
 
         conn.commit()
         conn.close()

@@ -32,9 +32,6 @@ echo "=> Create $USER user/group"
 useradd -rs /bin/false $USER -d $INSTALL_DIR
 
 echo "=> Copy sources to $INSTALL_DIR"
-cp requirements.txt $INSTALL_DIR
-
-cp __init__.py $INSTALL_DIR
 cp main.py $INSTALL_DIR
 cp -r src $INSTALL_DIR
 chown -R $USER:$GROUP $INSTALL_DIR
