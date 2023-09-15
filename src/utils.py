@@ -31,13 +31,17 @@ def custom_round(x: pd.Series):
     """
     res = x.copy()
     mask = x < 1000
+    # res[mask] = res[mask].round(-1)
+    res[mask] = round_base(res[mask], base=50)
+
+    mask = x >= 1000
     res[mask] = res[mask].round(-2)
 
-    mask = x.between(1000, 4000)
-    res[mask] = round_base(res[mask], 500)
-
-    mask = x > 4000
-    res[mask] = res[mask].round(-3)
+    # mask = x.between(1000, 4000)
+    # res[mask] = round_base(res[mask], 500)
+    #
+    # mask = x > 4000
+    # res[mask] = res[mask].round(-3)
 
     return res
 

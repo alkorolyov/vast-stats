@@ -45,7 +45,7 @@ DROP_COLS = ['credit_balance', 'credit_discount', 'location', 'geolocation', 'bu
 
 AVG_COLS = ['disk_bw', 'gpu_mem_bw', 'pcie_bw',
             'dlperf',
-            'score'
+            # 'score'
             ]
 
 HARDWARE_COLS = ['compute_cap', 'total_flops',
@@ -115,10 +115,10 @@ def _get_dtype(col_name: str) -> str:
         return 'INTEGER'
     if col_name in CATEGORICAL:
         return 'TEXT'
-    raise ValueError(f'Column name {col_name} not found in INTEGER or STRING column lists')
+    raise ValueError(f'Column name {col_name} not found in NUMERICAL or CATEGORICAL column lists')
 
 
-class Table:
+class _Table:
     """
     Base Class for SQL tables.
     Each table has a name and must implement two methods,
@@ -143,7 +143,10 @@ class Table:
         pass
 
 
-class Timestamp(Table):
+class Table(_Table):
+    """
+    Simple table with single value, acting as a primary key
+    """
     def __init__(self, name):
         super().__init__(name)
         self.tmp_table = 'tmp_offers'
@@ -165,12 +168,12 @@ class Timestamp(Table):
         return rowcount
 
 
-class MapTable(Table):
+class MapTable(_Table):
     def __init__(self, name: str, source: str, cols: list):
         super().__init__(name, cols)
         if len(cols) != 2:
             raise ValueError(f'Table error: two columns expected, got {len(cols)}')
-        self.prim_key = cols[0]
+        self.key_col = cols[0]
         self.sec_key = cols[1]
 
         if source == 'machines':
@@ -183,26 +186,27 @@ class MapTable(Table):
     def init_db(self, conn):
         conn.execute(
             f'''CREATE TABLE IF NOT EXISTS {self.name} (
-            {self.prim_key} INTEGER, 
+            {self.key_col} {_get_dtype(self.key_col)}, 
             {self.sec_key} {_get_dtype(self.sec_key)}, 
-            PRIMARY KEY ({self.prim_key}))'''
+            PRIMARY KEY ({self.key_col}))'''
         )
+
     def write_db(self, conn) -> int:
         rowcount = conn.execute(f'''
-        INSERT OR IGNORE INTO {self.name} ({self.prim_key}, {self.sec_key})
-        SELECT t.{self.prim_key}, t.{self.sec_key} FROM {self.tmp_table} t
+        INSERT OR IGNORE INTO {self.name} ({self.key_col}, {self.sec_key})
+        SELECT t.{self.key_col}, t.{self.sec_key} FROM {self.tmp_table} t
         ''').rowcount
         return rowcount
 
 
-class Timeseries(Table):
+class Timeseries(_Table):
     """
     Main class designed to efficiently store and manage time-series data in SQLite database.
     It optimizes disk space utilization by retaining only updated values while omitting
     unchanged ones. This optimization is achieved through the utilization of two distinct SQL tables:
 
-    - tbl_name_ts: This table captures the time-series data containing only the altered values.
-    - tbl_name_snp: This table holds the most recent snapshot of the time-series.
+    - tablename_ts: This table captures the time-series data containing only the altered values.
+    - tablename_snp: This table holds the most recent snapshot of the time-series.
 
     The process involves invoking the write_db() method. When this method is called, the new values
     from the temporary table are compared against the latest snapshot. If any modifications are
@@ -216,7 +220,7 @@ class Timeseries(Table):
     cols: str           # value columns string: 'col1, col2, ...'
     t_cols: str         # 't.col1, t.col2, ...'
     cols_dtypes: str    # 'col1 INTEGER, col2 TEXT ...'
-    key_col: str        # key column name
+    key_col: str        # primary key column name
     tmp_table: str      # source temp table name
     select_altered: str # sql expression to select only altered values
 

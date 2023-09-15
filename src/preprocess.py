@@ -63,12 +63,10 @@ def _fillna(raw: pd.DataFrame):
 def _conv_to_int(raw: pd.DataFrame, cols: list):
     for col in cols:
         if raw.index.name == col:
-            raw.index = raw.index.astype(int)
+            raw.index = np.round(raw.index).astype(int)
         if col not in raw:
             continue
-        if is_float_dtype(raw[col]):
-            raw[col] = raw[col].round()
-        raw[col] = raw[col].astype(int)
+        raw[col] = raw[col].round().astype(int)
 
 
 def _conv_to_str(raw: pd.DataFrame, cols: list):
@@ -153,17 +151,16 @@ def preprocess(raw: pd.DataFrame):
 
     # Hardware
     raw.bw_nvlink = raw.bw_nvlink.round(-1)
-    raw.cpu_ram = (raw.cpu_ram / 1024).round()  # RAM in Gb
+    raw.cpu_ram = raw.cpu_ram / 1024  # RAM in Gb
     # raw['cpu_ram_rnd'] = _round_ram(raw.cpu_ram)
     # raw['disk_space_rnd'] = raw.disk_space.round(-2).replace(0, 100)
-    raw.pcie_bw = raw.pcie_bw.round()
-    raw.gpu_mem_bw = raw.gpu_mem_bw.round()
-    # raw.disk_bw = custom_round(raw.disk_bw)
-    raw.disk_bw = raw.disk_bw.round()
+    # raw.pcie_bw = raw.pcie_bw.round()
+    raw.gpu_mem_bw = round_base(raw.gpu_mem_bw, base=50)
+    raw.disk_bw = raw.disk_bw.round(-2)
 
     # scores
-    raw.dlperf =raw.dlperf.round()
-    raw.score = raw.score.round()
+    raw.dlperf =round_base(raw.dlperf, base=50)
+    # raw.score = raw.score.round()
 
     # inet
     raw.inet_down = raw.inet_down.round(-1)
@@ -175,15 +172,15 @@ def preprocess(raw: pd.DataFrame):
     raw.end_date = round_day(raw.end_date)
 
     # Reliability * 1e4
-    raw.reliability = (raw.reliability * 1e4).round()
+    raw.reliability = raw.reliability * 1e4
 
     # All costs * 1000 as integer
-    raw.dph_base = (raw.dph_base * 1e3).round()
-    raw.storage_cost = (raw.storage_cost * 1e3).round()
-    raw.inet_up_cost = (raw.inet_up_cost * 1e3).round()
-    raw.inet_down_cost = (raw.inet_down_cost * 1e3).round()
-    raw.min_bid = (raw.min_bid * 1e3).round()
-    raw.credit_discount_max = (raw.credit_discount_max * 1e3).round()
+    raw.dph_base = raw.dph_base * 1e3
+    raw.storage_cost = raw.storage_cost * 1e3
+    raw.inet_up_cost = raw.inet_up_cost * 1e3
+    raw.inet_down_cost = raw.inet_down_cost * 1e3
+    raw.min_bid = raw.min_bid * 1e3
+    raw.credit_discount_max = raw.credit_discount_max * 1e3
 
     _conv_to_int(raw, tbl.NUMERICAL)
     _conv_to_str(raw, tbl.CATEGORICAL)

@@ -10,7 +10,7 @@ from time import sleep, time
 
 from src.tables import get_offers, get_machines, get_machines_offers, df_to_tmp_table, COST_COLS, HARDWARE_COLS, \
     EOD_COLS, AVG_COLS, \
-    Timeseries, MapTable, Timestamp, OnlineTS, MachineTS, AverageStd
+    Timeseries, MapTable, Table, OnlineTS, MachineTS, AverageStd
 from src.preprocess import preprocess, split_raw
 from src.utils import time_ms, time_utc_now
 
@@ -52,7 +52,7 @@ def main():
     # inet = Timeseries('inet', ['inet_down', 'inet_up'])
     # cost = Timeseries('cost', COST_COLS)
     # avg = AverageStd('avg', AVG_COLS, period='1 h')
-    ts = Timestamp('timestamp_tbl')
+    ts = Table('timestamp_tbl')
 
     tables = [
         host_machine, online,
