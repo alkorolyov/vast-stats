@@ -11,32 +11,32 @@ offers_url = 'https://500.farm/vastai-exporter/offers'
 machines_url = 'https://500.farm/vastai-exporter/machines'
 
 ALL_COLS = ['bundle_id', 'bw_nvlink', 'compute_cap', 'cpu_cores',
- 'cpu_cores_effective', 'cpu_name', 'cpu_ram', 'credit_balance',
- 'credit_discount', 'credit_discount_max', 'cuda_max_good',
- 'direct_port_count', 'discount_rate', 'discounted_dph_total',
- 'discounted_hourly', 'disk_bw', 'disk_name', 'disk_space', 'dlperf',
- 'dlperf_per_dphtotal', 'dph_base', 'driver_version', 'duration',
- 'end_date', 'flops_per_dphtotal', 'geolocation', 'gpu_display_active',
- 'gpu_frac', 'gpu_lanes', 'gpu_mem_bw', 'gpu_name', 'gpu_ram', 'has_avx',
- 'host_id', 'host_run_time', 'hosting_type', 'id', 'inet_down',
- 'inet_down_cost', 'inet_up', 'inet_up_cost', 'machine_id', 'min_bid',
- 'mobo_name', 'num_gpus', 'pci_gen', 'pcie_bw', 'public_ipaddr',
+            'cpu_cores_effective', 'cpu_name', 'cpu_ram', 'credit_balance',
+            'credit_discount', 'credit_discount_max', 'cuda_max_good',
+            'direct_port_count', 'discount_rate', 'discounted_dph_total',
+            'discounted_hourly', 'disk_bw', 'disk_name', 'disk_space', 'dlperf',
+            'dlperf_per_dphtotal', 'dph_base', 'driver_version', 'duration',
+            'end_date', 'flops_per_dphtotal', 'geolocation', 'gpu_display_active',
+            'gpu_frac', 'gpu_lanes', 'gpu_mem_bw', 'gpu_name', 'gpu_ram', 'has_avx',
+            'host_id', 'host_run_time', 'hosting_type', 'id', 'inet_down',
+            'inet_down_cost', 'inet_up', 'inet_up_cost', 'machine_id', 'min_bid',
+            'mobo_name', 'num_gpus', 'pci_gen', 'pcie_bw', 'public_ipaddr',
             'reliability2', 'rentable', 'score', 'start_date', 'storage_cost',
             'total_flops', 'verification', 'verified', 'timestamp']
 
 NUMERICAL = ['has_avx', 'bw_nvlink', 'cpu_cores', 'cpu_ram', 'hosting_type', 'disk_space',
-              'dlperf', 'score', 'verification', 'reliability',
-              'dph_base', 'storage_cost', 'inet_up_cost', 'inet_down_cost', 'min_bid', 'credit_discount_max',
-              'total_flops', 'disk_bw', 'gpu_mem_bw', 'inet_down',
-              'inet_up', 'hosting_type', 'pcie_bw', 'rented', 'static_ip',
-              'compute_cap', 'direct_port_count', 'end_date',
-              'gpu_display_active', 'gpu_lanes', 'gpu_ram', 'host_id',
-              'machine_id', 'id', 'min_chunk', 'num_gpus', 'pci_gen',
-              'num_gpus_rented', 'timestamp', 'dph_base',
+             'dlperf', 'score', 'verification', 'reliability',
+             'dph_base', 'storage_cost', 'inet_up_cost', 'inet_down_cost', 'min_bid', 'credit_discount_max',
+             'total_flops', 'disk_bw', 'gpu_mem_bw', 'inet_down',
+             'inet_up', 'hosting_type', 'pcie_bw', 'rented', 'static_ip',
+             'compute_cap', 'direct_port_count', 'end_date',
+             'gpu_display_active', 'gpu_lanes', 'gpu_ram', 'host_id',
+             'machine_id', 'id', 'min_chunk', 'num_gpus', 'pci_gen',
+             'num_gpus_rented', 'timestamp', 'dph_base',
              ]
 
 CATEGORICAL = ['cpu_name', 'cuda_max_good', 'disk_name', 'driver_version',
-            'gpu_name', 'mobo_name', 'public_ipaddr', 'country']
+               'gpu_name', 'mobo_name', 'public_ipaddr', 'country']
 
 DROP_COLS = ['credit_balance', 'credit_discount', 'location', 'geolocation', 'bundle_id',
              'discount_rate', 'discounted_dph_total', 'discounted_hourly',
@@ -44,8 +44,8 @@ DROP_COLS = ['credit_balance', 'credit_discount', 'location', 'geolocation', 'bu
              'verified', 'host_run_time', 'cpu_cores_effective', 'gpu_frac', 'chunks']
 
 AVG_COLS = ['disk_bw', 'gpu_mem_bw', 'pcie_bw',
-            'dlperf',
-            # 'score'
+            'dlperf', 'inet_down', 'inet_up',
+            'score'
             ]
 
 HARDWARE_COLS = ['compute_cap', 'total_flops',
@@ -90,6 +90,7 @@ def get_machines_offers():
     preprocess(raw)
     return split_raw(raw)
 
+
 def get_machines() -> DataFrame:
     return _get_raw(machines_url)
 
@@ -124,8 +125,9 @@ class _Table:
     Each table has a name and must implement two methods,
     init_db, write_db.
     """
-    name: str               # Table name
-    cols_list: List[str]    # list of column names
+    name: str  # Table name
+    cols_list: List[str]  # list of column names
+
     def __init__(self, name: str, cols: list = None):
         self.name = name
         self.cols_list = cols
@@ -147,6 +149,7 @@ class Table(_Table):
     """
     Simple table with single value, acting as a primary key
     """
+
     def __init__(self, name):
         super().__init__(name)
         self.tmp_table = 'tmp_offers'
@@ -217,15 +220,15 @@ class Timeseries(_Table):
     """
 
     # SQL helper strings
-    cols: str           # value columns string: 'col1, col2, ...'
-    t_cols: str         # 't.col1, t.col2, ...'
-    cols_dtypes: str    # 'col1 INTEGER, col2 TEXT ...'
-    key_col: str        # primary key column name
-    tmp_table: str      # source temp table name
-    select_altered: str # sql expression to select only altered values
+    cols: str  # value columns string: 'col1, col2, ...'
+    t_cols: str  # 't.col1, t.col2, ...'
+    cols_dtypes: str  # 'col1 INTEGER, col2 TEXT ...'
+    key_col: str  # primary key column name
+    tmp_table: str  # source temp table name
+    select_altered: str  # sql expression to select only altered values
 
-    timeseries: str     # table name for timeseries
-    snapshot: str       # table name for snapshot
+    timeseries: str  # table name for timeseries
+    snapshot: str  # table name for snapshot
 
     def __init__(self, name: str, cols: list, source: str = 'machines'):
         super().__init__(name, cols)
@@ -288,9 +291,8 @@ class Timeseries(_Table):
 
 
 class AverageStd(Timeseries):
-    def __init__(self, name: str, source: str, cols: list, period: str = '5 min'):
+    def __init__(self, name: str, cols: list, source: str = 'machines', period: str = '5 min'):
         super().__init__(name, cols, source)
-
         self.period = pd.to_timedelta(period)
         self.cols_avg_std = f"{', '.join([f'{c}_avg, {c}_std' for c in cols])}"
         self.cols_avg_std_dtypes = f"{', '.join([f'{c}_avg INTEGER, {c}_std REAL' for c in cols])}"
@@ -324,7 +326,7 @@ class AverageStd(Timeseries):
     def _write_mean_std(self, conn):
         conn.create_function('sqrt', 1, math.sqrt)
 
-        avg_std_calc =f', \n\r'.join([
+        avg_std_calc = f', \n\r'.join([
             f'ROUND(AVG({c})),\n\r'
             f'ROUND(sqrt(AVG({c} * {c}) - AVG({c}) * AVG({c})), 2)'
             for c in self.cols_list
@@ -347,7 +349,6 @@ class AverageStd(Timeseries):
         # print(sql_expression)
         rowcount = conn.execute(sql_expression).rowcount
         return rowcount
-
 
         # # calculate mean, std
         # df = table_to_df(self.snapshot, conn)
@@ -383,7 +384,7 @@ class AverageStd(Timeseries):
         conn.execute(f'DELETE FROM {self.snapshot}')
 
 
-class MachineTS(Timeseries):
+class MachineSplit(Timeseries):
     def init_db(self, conn):
         super().init_db(conn)
         conn.execute('''
@@ -494,7 +495,6 @@ class NewOnlineTS(OnlineTS):
         WHERE s.machine_id IS NULL;
         """).rowcount
 
-
         conn.execute(f"""
         INSERT OR REPLACE INTO {self.snapshot} (machine_id, online, timestamp)
         SELECT t.machine_id, 1, t.timestamp
@@ -537,7 +537,6 @@ class NewOnlineTS(OnlineTS):
         SELECT * FROM offline_machines
         WHERE (machine_id, 0) NOT IN (SELECT machine_id, online from {self.snapshot});
         """)
-
 
         return rowcount
 

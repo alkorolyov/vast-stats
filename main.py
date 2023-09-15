@@ -10,7 +10,7 @@ from time import sleep, time
 
 from src.tables import get_offers, get_machines, get_machines_offers, df_to_tmp_table, COST_COLS, HARDWARE_COLS, \
     EOD_COLS, AVG_COLS, \
-    Timeseries, MapTable, Table, OnlineTS, MachineTS, AverageStd
+    Timeseries, MapTable, Table, OnlineTS, MachineSplit, AverageStd
 from src.preprocess import preprocess, split_raw
 from src.utils import time_ms, time_utc_now
 
@@ -40,46 +40,44 @@ def main():
     host_machine = MapTable('host_machine_map', 'machines', ['machine_id', 'host_id'])
     online = OnlineTS('online', 'host_machine_map')
     # new_online = NewOnlineTS('new_online', 'host_machine_map')
-    machine_split = MachineTS('machine_split', ['machine_id', 'num_gpus'], 'offers')
+    machine_split = MachineSplit('machine_split', ['machine_id', 'num_gpus'], 'offers')
     cpu_ram = Timeseries('cpu_ram', ['cpu_ram'])
     disk = Timeseries('disk', ['disk_space'])
     reliability = Timeseries('reliability', ['reliability'])
     rent = Timeseries('rent', ['machine_id', 'rented'], 'offers')
 
     # Aggregated Tables
-    # hardware = Timeseries('hardware', HARDWARE_COLS)
-    # eod = Timeseries('eod', EOD_COLS)
-    # inet = Timeseries('inet', ['inet_down', 'inet_up'])
-    # cost = Timeseries('cost', COST_COLS)
-    # avg = AverageStd('avg', AVG_COLS, period='1 h')
+    hardware = Timeseries('hardware', HARDWARE_COLS)
+    eod = Timeseries('eod', EOD_COLS)
+    cost = Timeseries('cost', COST_COLS)
+    avg = AverageStd('avg', AVG_COLS, period='1 d')
     ts = Table('timestamp_tbl')
 
     tables = [
         host_machine, online,
         # new_online,
         machine_split,
-        # hardware,
+        hardware,
         cpu_ram, disk,
-        # eod,
+        eod,
         reliability,
-        # cost,
-        # inet,
+        cost,
         rent,
-        # avg,
+        avg,
         ts
     ]
 
-    for col in HARDWARE_COLS:
-        tables.append(Timeseries(col, [col]))
-    for col in EOD_COLS:
-        tables.append(Timeseries(col, [col]))
-    for col in COST_COLS:
-        tables.append(Timeseries(col, [col]))
-    for col in AVG_COLS:
-        tables.append(Timeseries(col, [col]))
-
-    tables.append(Timeseries('inet_up', ['inet_up']))
-    tables.append(Timeseries('inet_down', ['inet_down']))
+    # for col in HARDWARE_COLS:
+    #     tables.append(Timeseries(col, [col]))
+    # for col in EOD_COLS:
+    #     tables.append(Timeseries(col, [col]))
+    # for col in COST_COLS:
+    #     tables.append(Timeseries(col, [col]))
+    # for col in AVG_COLS:
+    #     tables.append(Timeseries(col, [col]))
+    #
+    # tables.append(Timeseries('inet_up', ['inet_up']))
+    # tables.append(Timeseries('inet_down', ['inet_down']))
 
     # logging
     log_handler = None
@@ -163,8 +161,8 @@ def main():
         for table in tables:
             start = time()
             rowcount = table.write_db(conn)
-            if '_bw' in table.name or table.name == 'dlperf' or table.name == 'score':
-                logging.info(f'[{table.name.upper()}] {rowcount} rows updated in {time_ms(time() - start)}ms')
+            # if '_bw' in table.name or table.name == 'dlperf' or table.name == 'score':
+            logging.info(f'[{table.name.upper()}] {rowcount} rows updated in {time_ms(time() - start)}ms')
 
         conn.commit()
         conn.close()

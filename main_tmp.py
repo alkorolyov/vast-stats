@@ -4,7 +4,7 @@ import sqlite3
 import pandas as pd
 from time import sleep, time
 
-from src.tables import get_offers, get_machines, df_to_tmp_table, COST_COLS, HARDWARE_COLS, EOD_COLS, AVG_COLS, Timeseries, MapTable, OnlineTS, MachineTS, NewOnlineTS
+from src.tables import get_offers, get_machines, df_to_tmp_table, COST_COLS, HARDWARE_COLS, EOD_COLS, AVG_COLS, Timeseries, MapTable, OnlineTS, MachineSplit, NewOnlineTS
 from src.preprocess import preprocess
 from src.utils import time_ms, time_utc_now
 
@@ -14,7 +14,7 @@ TIMEOUT = 20
 
 host_machine = MapTable('host_machine_map', 'machines', ['machine_id', 'host_id'])
 online = NewOnlineTS('online', 'host_machine_map')
-machine_split = MachineTS('machine_split', 'offers', ['machine_id', 'num_gpus'])
+machine_split = MachineSplit('machine_split', 'offers', ['machine_id', 'num_gpus'])
 hardware = Timeseries('hardware', HARDWARE_COLS, 'machines')
 cpu_ram = Timeseries('cpu_ram', ['cpu_ram'], 'machines')
 disk = Timeseries('disk', ['disk_space'], 'machines')

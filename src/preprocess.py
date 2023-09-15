@@ -7,13 +7,13 @@ from src import tables as tbl
 from src.utils import round_day, round_base, custom_round
 
 
-
 VERIFIED_ENUM = {
     'unverified': 0,
     'verified': 1,
     'deverified': 2,
     'de-verified': 3
 }
+
 
 def _round_ram(cpu_ram: pd.Series):
     """ Round cpu_ram to the nearest fraction of power of two """
@@ -153,18 +153,18 @@ def preprocess(raw: pd.DataFrame):
     raw.bw_nvlink = raw.bw_nvlink.round(-1)
     raw.cpu_ram = raw.cpu_ram / 1024  # RAM in Gb
     # raw['cpu_ram_rnd'] = _round_ram(raw.cpu_ram)
-    # raw['disk_space_rnd'] = raw.disk_space.round(-2).replace(0, 100)
+    raw.disk_space = raw.disk_space.round(-1)
     # raw.pcie_bw = raw.pcie_bw.round()
-    raw.gpu_mem_bw = round_base(raw.gpu_mem_bw, base=50)
-    raw.disk_bw = raw.disk_bw.round(-2)
+    # raw.gpu_mem_bw = round_base(raw.gpu_mem_bw, base=50)
+    # raw.disk_bw = raw.disk_bw.round(-2)
 
     # scores
-    raw.dlperf =round_base(raw.dlperf, base=50)
+    # raw.dlperf = round_base(raw.dlperf, base=50)
     # raw.score = raw.score.round()
 
     # inet
-    raw.inet_down = raw.inet_down.round(-1)
-    raw.inet_up = raw.inet_up.round(-1)
+    # raw.inet_down = raw.inet_down.round(-1)
+    # raw.inet_up = raw.inet_up.round(-1)
 
     # End Of Day data
     raw.verification = raw.verification.map(VERIFIED_ENUM)
@@ -175,18 +175,21 @@ def preprocess(raw: pd.DataFrame):
     raw.reliability = raw.reliability * 1e4
 
     # All costs * 1000 as integer
-    raw.dph_base = raw.dph_base * 1e3
-    raw.storage_cost = raw.storage_cost * 1e3
-    raw.inet_up_cost = raw.inet_up_cost * 1e3
-    raw.inet_down_cost = raw.inet_down_cost * 1e3
-    raw.min_bid = raw.min_bid * 1e3
-    raw.credit_discount_max = raw.credit_discount_max * 1e3
+    for col in tbl.COST_COLS:
+        raw[col] = raw[col] * 1e3
+
+    # raw.dph_base = raw.dph_base * 1e3
+    # raw.storage_cost = raw.storage_cost * 1e3
+    # raw.inet_up_cost = raw.inet_up_cost * 1e3
+    # raw.inet_down_cost = raw.inet_down_cost * 1e3
+    # raw.min_bid = raw.min_bid * 1e3
+    # raw.credit_discount_max = raw.credit_discount_max * 1e3
 
     _conv_to_int(raw, tbl.NUMERICAL)
     _conv_to_str(raw, tbl.CATEGORICAL)
 
     # Drop
-    raw.drop(columns=tbl.DROP_COLS, inplace=True,  errors='ignore')
+    raw.drop(columns=tbl.DROP_COLS, inplace=True, errors='ignore')
 
 
 def split_raw(raw: pd.DataFrame):

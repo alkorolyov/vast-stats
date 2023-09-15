@@ -1,7 +1,7 @@
 import gc
 import numpy as np
 import pandas as pd
-from pandas.core.dtypes.common import is_integer_dtype, is_float_dtype, is_numeric_dtype
+from pandas.core.dtypes.common import is_integer_dtype, is_float_dtype, is_numeric_dtype, is_string_dtype
 
 
 def time_ms(time_sec: float):
@@ -20,30 +20,30 @@ def round_base(x: pd.Series, base=5):
     return (base * (x.astype(float)/base).round()).astype(int)
 
 
-def custom_round(x: pd.Series):
+def custom_round(x: pd.Series, round_list: list):
     """
-    Custom round function for disk_bw:
-    x < 1000: round to 100
-    x in [1000, 4000]: round to 500
-    x > 4000: round to 1000
-    @param x:
+    Custom round function to have different rounding bases for each interval.
+    Receives ending values and rounding bases for each interval.
+    Example:
+        round_list = [(400, 10), (1000, 100)]
+        rounds values [0 ... 400] by 10
+        rounds values [400 ... 1000] by 100
+    @param x: input Series
+    @param round_list: list of tuples (end_value, round_base)
     @return: rounded series
     """
+
     res = x.copy()
-    mask = x < 1000
-    # res[mask] = res[mask].round(-1)
-    res[mask] = round_base(res[mask], base=50)
-
-    mask = x >= 1000
-    res[mask] = res[mask].round(-2)
-
-    # mask = x.between(1000, 4000)
-    # res[mask] = round_base(res[mask], 500)
-    #
-    # mask = x > 4000
-    # res[mask] = res[mask].round(-3)
+    end = 0
+    for r in round_list:
+        start = end
+        end = r[0]
+        base = r[1]
+        mask = x.between(start, end)
+        res[mask] = round_base(res[mask], base=base)
 
     return res
+
 
 def is_sorted(arr):
     return np.all(arr[:-1] <= arr[1:])
@@ -146,23 +146,24 @@ def _pd_min_chunk(df: pd.DataFrame) -> pd.DataFrame:
     return undivided
 
 
-def _is_float_to_int(arr) -> bool:
+def _is_close_to_int(arr) -> bool:
     return np.all(np.isclose(arr, np.round(arr)))
 
 
-def check_if_integer(series) -> bool:
-    if is_float_dtype(series.dtype):
-        return _is_float_to_int(series.values)
+def check_if_integer(arr) -> bool:
+    if is_float_dtype(arr):
+        return _is_close_to_int(arr)
     return False
 
 
-def reduce_mem_usage(df, int_cast=True, obj_to_category=False, subset=None, verbose=False):
+def reduce_mem_usage(df, subset=None, int_cast=True, obj_to_category=False, verbose=False):
     """
     Iterate through all the columns of a dataframe and modify the data type to reduce memory usage.
     :param df: dataframe to reduce (pd.DataFrame)
     :param int_cast: indicate if columns should be tried to be casted to int (bool)
     :param obj_to_category: convert non-datetime related objects to category dtype (bool)
     :param subset: subset of columns to analyse (list)
+    :param verbose: print statistics (bool)
     :return: dataset with the column dtypes adjusted (pd.DataFrame)
     """
     if verbose:
@@ -208,13 +209,13 @@ def reduce_mem_usage(df, int_cast=True, obj_to_category=False, subset=None, verb
                     df[col] = df[col].astype(np.float32)
                 else:
                     df[col] = df[col].astype(np.float64)
-        # elif 'datetime' not in col_type.name and obj_to_category:
-        #     df[col] = df[col].astype('category')
+        elif is_string_dtype(col_type) and obj_to_category:
+            df[col] = df[col].astype('category')
 
     if verbose:
         gc.collect()
         end_mem = df.memory_usage().sum() / 1024 ** 2
-        print('Memory usage after optimization is: {:.3f} MB'.format(end_mem))
+        print('Memory usage after optimization is: {:.2f} MB'.format(end_mem))
         print('Decreased by {:.1f}%'.format(100 * (start_mem - end_mem) / start_mem))
 
     return df

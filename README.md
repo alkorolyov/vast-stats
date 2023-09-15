@@ -10,7 +10,6 @@ git clone https://github.com/alkorolyov/vast-stats; cd vast-stats; sudo bash ./i
 
 # download from gcloud
 
-
 # gcloud compute scp {vm_instance_name}:/var/lib/vast-stats/vast.db vast.db
 
 cd C:\Users\ergot\DataspellProjects\vast-stats\data
