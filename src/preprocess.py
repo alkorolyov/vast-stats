@@ -153,7 +153,7 @@ def preprocess(raw: pd.DataFrame):
     raw.bw_nvlink = raw.bw_nvlink.round(-1)
     raw.cpu_ram = raw.cpu_ram / 1024  # RAM in Gb
     # raw['cpu_ram_rnd'] = _round_ram(raw.cpu_ram)
-    raw.disk_space = raw.disk_space.round(-1)
+    raw.disk_space = raw.disk_space.round(-1).replace(0, 10)
     # raw.pcie_bw = raw.pcie_bw.round()
     # raw.gpu_mem_bw = round_base(raw.gpu_mem_bw, base=50)
     # raw.disk_bw = raw.disk_bw.round(-2)

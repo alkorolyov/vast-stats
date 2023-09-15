@@ -158,16 +158,18 @@ def main():
         df_to_tmp_table(machines, 'tmp_machines', conn)
         logging.info(f'[TMP_TABLES] created in {time_ms(time() - start)}ms')
 
+        total_rows = 0
         for table in tables:
             start = time()
             rowcount = table.write_db(conn)
-            # if '_bw' in table.name or table.name == 'dlperf' or table.name == 'score':
-            logging.info(f'[{table.name.upper()}] {rowcount} rows updated in {time_ms(time() - start)}ms')
+            total_rows += rowcount
+            if rowcount:
+                logging.debug(f'[{table.name.upper()}] {rowcount} rows updated in {time_ms(time() - start)}ms')
 
         conn.commit()
         conn.close()
 
-        logging.info(f'[TOTAL_DB] database updated in {time_ms(time() - start_total_db)}ms')
+        logging.info(f'[TOTAL_DB] {total_rows} rows updated in {time_ms(time() - start_total_db)}ms')
         logging.info('=' * 80)
 
         # break

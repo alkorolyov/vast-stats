@@ -147,12 +147,13 @@ class _Table:
 
 class Table(_Table):
     """
-    Simple table with single value, acting as a primary key
+    Simple table with single value, acting as a primary key.
+    Value taken from tmp_table.
     """
 
     def __init__(self, name):
         super().__init__(name)
-        self.tmp_table = 'tmp_offers'
+        self.tmp_table = 'tmp_machines'
 
     def init_db(self, conn):
         conn.execute(f'''
@@ -163,12 +164,12 @@ class Table(_Table):
         ''')
 
     def write_db(self, conn):
-        rowcount = conn.execute(f'''
-        INSERT OR IGNORE INTO {self.name}
-        SELECT timestamp FROM {self.tmp_table}
-        LIMIT 1
-        ''').rowcount
-        return rowcount
+        conn.execute(f'''
+            INSERT OR IGNORE INTO {self.name}
+            SELECT timestamp FROM {self.tmp_table}
+            LIMIT 1
+        ''')
+        return 0
 
 
 class MapTable(_Table):
@@ -225,7 +226,7 @@ class Timeseries(_Table):
     cols_dtypes: str  # 'col1 INTEGER, col2 TEXT ...'
     key_col: str  # primary key column name
     tmp_table: str  # source temp table name
-    select_altered: str  # sql expression to select only altered values
+    from_altered: str  # sql expression to select only altered values
 
     timeseries: str  # table name for timeseries
     snapshot: str  # table name for snapshot
@@ -249,8 +250,8 @@ class Timeseries(_Table):
         self.timeseries = name + '_ts'
         self.snapshot = name + '_snp'
 
-        self.select_altered = f'''
-        SELECT t.{self.key_col}, {self.t_cols}, t.timestamp FROM {self.tmp_table} t
+        self.from_altered = f'''         
+        FROM {self.tmp_table} t
         WHERE 
             ({self.key_col}, {self.cols}) NOT IN 
             (SELECT {self.key_col}, {self.cols} FROM {self.snapshot})
@@ -267,7 +268,7 @@ class Timeseries(_Table):
         CREATE TABLE IF NOT EXISTS {self.snapshot} (
              {self.key_col} INTEGER, 
              {self.cols_dtypes},
-             timestamp INTEGER,
+--              timestamp INTEGER,
              PRIMARY KEY ({self.key_col}))
         ''')
 
@@ -279,14 +280,16 @@ class Timeseries(_Table):
     def _insert_timeseries(self, conn):
         rowcount = conn.execute(f''' 
         INSERT INTO {self.timeseries} ({self.key_col}, {self.cols}, timestamp)
-        {self.select_altered}
+        SELECT t.{self.key_col}, {self.t_cols}, t.timestamp
+        {self.from_altered}
         ''').rowcount
         return rowcount
 
     def _update_snapshot(self, conn):
         conn.execute(f'''
-        INSERT OR REPLACE INTO {self.snapshot} ({self.key_col}, {self.cols}, timestamp)
-        {self.select_altered}
+        INSERT OR REPLACE INTO {self.snapshot} ({self.key_col}, {self.cols})
+        SELECT t.{self.key_col}, {self.t_cols}
+        {self.from_altered}
         ''')
 
 
@@ -374,11 +377,11 @@ class AverageStd(Timeseries):
         # # write to sql
         # df_.to_sql(self.timeseries, conn, if_exists='append')
 
-    def _write_snapshot(self, conn) -> int:
-        return conn.execute(f'''        
-        INSERT INTO {self.snapshot}
-        SELECT {self.key_col}, {self.cols}, timestamp FROM {self.tmp_table} AS t
-        ''').rowcount
+    def _write_snapshot(self, conn):
+        conn.execute(f'''        
+            INSERT INTO {self.snapshot}
+            SELECT {self.key_col}, {self.cols}, timestamp FROM {self.tmp_table} AS t
+        ''')
 
     def _clear_snapshot(self, conn):
         conn.execute(f'DELETE FROM {self.snapshot}')
@@ -400,8 +403,8 @@ class MachineSplit(Timeseries):
         ''')
 
         conn.execute(f'''
-        INSERT INTO {self.snapshot} ({self.key_col}, {self.cols}, timestamp)
-        SELECT t.{self.key_col}, {self.t_cols}, t.timestamp
+        INSERT INTO {self.snapshot} ({self.key_col}, {self.cols})
+        SELECT t.{self.key_col}, {self.t_cols}
         FROM {self.tmp_table} t
         LEFT JOIN {self.snapshot} ON {self.snapshot}.machine_id = t.machine_id
         WHERE {self.snapshot}.machine_id IS NULL;
