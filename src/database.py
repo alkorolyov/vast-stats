@@ -1,12 +1,16 @@
+from __future__ import annotations
+
 import sqlite3
 import pandas as pd
 import logging
+
+from src.tables import MapTable
 
 
 class DbManager:
     """ Class responsible for basic database operations """
     db_path: str
-    conn: sqlite3.Connection
+    conn: sqlite3.Connection | None
 
     def __init__(self, db_path):
         self.db_path = db_path
@@ -24,8 +28,8 @@ class DbManager:
             self.conn.close()
             logging.info(f"Disconnected from the database '{self.db_path}'.")
 
-    def execute(self, sql):
-        return self.conn.execute(sql)
+    def execute(self, sql_query):
+        return self.conn.execute(sql_query)
 
     def create_table(self, name, cols):
         try:
@@ -127,13 +131,25 @@ class DbManager:
 
 class DataBase:
     """ Class responsible for the Database structure """
-    def __init__(self, db_manager: DbManager):
-        self.db_manager = db_manager
-        self.conn = db_manager.conn
+    def __init__(self, manager: DbManager):
+        self.manager = manager
         self.ts_idx = 'timestamp_idx'
+        self.tmp_mach = 'tmp_machines'
+        self.tmp_offr = 'tmp_offers'
 
     def create_ts_index(self):
-        self.db_manager.create_table(self.ts_idx, ['timestamp INTEGER'])
+        self.manager.create_table(self.ts_idx, ['timestamp INTEGER PRIMARY KEY'])
+
+    def create_tmp_tables(self, machines, offers):
+        self.manager.df_to_tmp_table(machines, self.tmp_mach)
+        self.manager.df_to_tmp_table(offers, self.tmp_offr)
+
+    def create_map_tables(self):
+        host_mach_map = MapTable('host_mach_map', ['host_id', 'machine_id'])
+        mach_offer_map = MapTable('mach_offer_map', ['machine_id', 'id'])
+
+        host_mach_map.init_db(self.manager.conn)
+        mach_offer_map.init_db(self.manager.conn)
 
     def get_last_ts(self) -> int:
         output = self.conn.execute(f'''
@@ -143,4 +159,7 @@ class DataBase:
             DESC LIMIT 1
         ''').fetchall()
         return output[0][0] if output else 0
+
+
+
 

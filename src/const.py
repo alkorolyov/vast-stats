@@ -18,8 +18,10 @@ INT_COLS = ['has_avx', 'bw_nvlink', 'cpu_cores', 'cpu_ram', 'hosting_type', 'dis
              'machine_id', 'id', 'min_chunk', 'num_gpus', 'pci_gen',
              'num_gpus_rented', 'timestamp', 'dph_base',
             ]
+
 STR_COLS = ['cpu_name', 'cuda_max_good', 'disk_name', 'driver_version',
                'gpu_name', 'mobo_name', 'public_ipaddr', 'country']
+
 DROP_COLS = ['credit_balance', 'credit_discount', 'location', 'geolocation', 'bundle_id',
              'discount_rate', 'discounted_dph_total', 'discounted_hourly',
              'dlperf_per_dphtotal', 'duration', 'flops_per_dphtotal', 'start_date',
@@ -30,13 +32,16 @@ AVG_COLS = ['disk_bw', 'gpu_mem_bw', 'pcie_bw',
             'dlperf', 'inet_down', 'inet_up',
             'score'
             ]
+
 HARDWARE_COLS = ['compute_cap', 'total_flops',
                  'cpu_cores', 'cpu_name', 'has_avx',
                  'disk_name', 'hosting_type', 'mobo_name',
                  'gpu_name', 'num_gpus', 'pci_gen', 'gpu_lanes', 'gpu_ram', 'bw_nvlink']
+
 EOD_COLS = ['cuda_max_good', 'driver_version', 'direct_port_count',
             'country', 'verification',
             'end_date', 'public_ipaddr', 'static_ip']
+
 COST_COLS = ['dph_base', 'storage_cost', 'inet_up_cost',
              'inet_down_cost', 'min_bid', 'credit_discount_max']
 
