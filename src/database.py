@@ -110,6 +110,7 @@ class DbManager:
 
     def df_to_table(self, df, tbl_name):
         return df.to_sql(tbl_name, self.conn, if_exists='append')
+
         # cols_str = ", ".join([c for c in df.columns])
         # values = ('?, ' * len(df.columns))[:-2]
         #
