@@ -158,8 +158,7 @@ class Table(_Table):
     def init_db(self, conn):
         conn.execute(f'''
             CREATE TABLE IF NOT EXISTS {self.name} (
-            timestamp INTEGER,  
-            PRIMARY KEY (timestamp)
+            timestamp INTEGER PRIMARY KEY
             )
         ''')
 
@@ -188,12 +187,12 @@ class MapTable(_Table):
             raise ValueError(f'Table creation: source must be machines or offers, got {source}')
 
     def init_db(self, conn):
-        conn.execute(
-            f'''CREATE TABLE IF NOT EXISTS {self.name} (
-            {self.key_col} {_get_dtype(self.key_col)}, 
-            {self.sec_key} {_get_dtype(self.sec_key)}, 
-            PRIMARY KEY ({self.key_col}))'''
-        )
+        conn.execute(f'''
+            CREATE TABLE IF NOT EXISTS {self.name} (
+            {self.key_col} {_get_dtype(self.key_col)} PRIMARY KEY, 
+            {self.sec_key} {_get_dtype(self.sec_key)}
+            )
+        ''')
 
     def write_db(self, conn) -> int:
         rowcount = conn.execute(f'''
@@ -262,14 +261,16 @@ class Timeseries(_Table):
         CREATE TABLE IF NOT EXISTS {self.timeseries} (
             {self.key_col} INTEGER, 
             {self.cols_dtypes}, 
-            timestamp INTEGER) 
+            timestamp INTEGER,
+            FOREIGN KEY (timestamp)
+                REFERENCES timestamp_tbl (timestamp)
+            ) 
         ''')
         conn.execute(f'''
         CREATE TABLE IF NOT EXISTS {self.snapshot} (
-             {self.key_col} INTEGER, 
-             {self.cols_dtypes},
---              timestamp INTEGER,
-             PRIMARY KEY ({self.key_col}))
+             {self.key_col} INTEGER PRIMARY KEY, 
+             {self.cols_dtypes}
+             )
         ''')
 
     def write_db(self, conn) -> int:

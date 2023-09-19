@@ -8,7 +8,7 @@ from logging.handlers import RotatingFileHandler
 from time import sleep, time
 # from memory_profiler import profile
 
-from src.tables import get_offers, get_machines, get_machines_offers, df_to_tmp_table, COST_COLS, HARDWARE_COLS, \
+from src.tables import get_machines_offers, df_to_tmp_table, COST_COLS, HARDWARE_COLS, \
     EOD_COLS, AVG_COLS, \
     Timeseries, MapTable, Table, OnlineTS, MachineSplit, AverageStd
 from src.preprocess import preprocess, split_raw
@@ -170,7 +170,7 @@ def main():
         conn.close()
 
         logging.info(f'[TOTAL_DB] {total_rows} rows updated in {time_ms(time() - start_total_db)}ms')
-        logging.info('=' * 80)
+        logging.info('=' * 50)
 
         # break
         sleep(TIMEOUT)

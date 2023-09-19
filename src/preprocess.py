@@ -2,8 +2,7 @@ import numpy as np
 import pandas as pd
 from pandas.core.dtypes.common import is_integer_dtype, is_float_dtype, is_string_dtype
 
-from src import tables as tbl
-# from src.tables import INT32_COLS, STR_COLS, DROP_COLS
+from src import const
 from src.utils import round_day, round_base, custom_round
 
 
@@ -154,28 +153,23 @@ def preprocess(raw: pd.DataFrame):
     raw.cpu_ram = raw.cpu_ram / 1024  # RAM in Gb
     # raw['cpu_ram_rnd'] = _round_ram(raw.cpu_ram)
     raw.disk_space = raw.disk_space.round(-1).replace(0, 10)
-    # raw.pcie_bw = raw.pcie_bw.round()
+
+    # Average cols
+    raw.pcie_bw = raw.pcie_bw * 10
     # raw.gpu_mem_bw = round_base(raw.gpu_mem_bw, base=50)
     # raw.disk_bw = raw.disk_bw.round(-2)
-
-    # scores
     # raw.dlperf = round_base(raw.dlperf, base=50)
     # raw.score = raw.score.round()
 
-    # inet
-    # raw.inet_down = raw.inet_down.round(-1)
-    # raw.inet_up = raw.inet_up.round(-1)
-
     # End Of Day data
     raw.verification = raw.verification.map(VERIFIED_ENUM)
-    raw.cuda_max_good = raw.cuda_max_good.astype(str)
     raw.end_date = round_day(raw.end_date)
 
     # Reliability * 1e4
     raw.reliability = raw.reliability * 1e4
 
     # All costs * 1000 as integer
-    for col in tbl.COST_COLS:
+    for col in const.COST_COLS:
         raw[col] = raw[col] * 1e3
 
     # raw.dph_base = raw.dph_base * 1e3
@@ -185,11 +179,10 @@ def preprocess(raw: pd.DataFrame):
     # raw.min_bid = raw.min_bid * 1e3
     # raw.credit_discount_max = raw.credit_discount_max * 1e3
 
-    _conv_to_int(raw, tbl.NUMERICAL)
-    _conv_to_str(raw, tbl.CATEGORICAL)
-
+    _conv_to_int(raw, const.INT_COLS)
+    _conv_to_str(raw, const.STR_COLS)
     # Drop
-    raw.drop(columns=tbl.DROP_COLS, inplace=True, errors='ignore')
+    raw.drop(columns=const.DROP_COLS, inplace=True, errors='ignore')
 
 
 def split_raw(raw: pd.DataFrame):
@@ -201,4 +194,3 @@ def split_raw(raw: pd.DataFrame):
     offers = _get_offers(raw, min_chunk)
     machines = _get_machines(raw, slice_idx)
     return machines, offers
-
