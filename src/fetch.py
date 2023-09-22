@@ -5,7 +5,7 @@ import logging
 from urllib.parse import quote_plus
 from src import const
 from src.utils import time_utc_now
-from src.database import DbManager
+from src.manager import DbManager
 from time import sleep
 
 
@@ -101,7 +101,7 @@ def fetch_single(source, max_tries=3) -> pd.DataFrame:
     return None
 
 
-def fetch(last_ts: int) -> pd.DataFrame:
+def fetch(last_ts: int = 0) -> pd.DataFrame:
     sources = _get_sources()
     for source in sources:
         raw = fetch_single(source)

@@ -4,12 +4,11 @@ import pandas as pd
 
 from src.tables import MapTable, df_to_tmp_table, get_tables, get_tbl_info, table_to_df
 
-
 # Fixture to create and connect to the test database
 @pytest.fixture()
 def conn():
-    # test_conn = sqlite3.connect(':memory:')  # Use an in-memory database for testing
-    test_conn = sqlite3.connect('test.db')
+    test_conn = sqlite3.connect(':memory:')  # Use an in-memory database for testing
+    # test_conn = sqlite3.connect('test.db')
     yield test_conn
     test_conn.commit()
     test_conn.close()

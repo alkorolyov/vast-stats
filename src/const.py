@@ -7,6 +7,8 @@ VAST_API_TIMEOUT = 25   # vast-api takes longer to get response
 RETRY_TIMEOUT = 20      # timeout between failed retries
 TIMEOUT = 70            # main cycle timeout
 
+LOG_FORMAT = '[%(asctime)s] [%(levelname)s] %(message)s'
+
 # Define column names and types for incoming data
 INT_COLS = ['has_avx', 'bw_nvlink', 'cpu_cores', 'cpu_ram', 'hosting_type', 'disk_space',
              'dlperf', 'score', 'verification', 'reliability',
@@ -21,6 +23,8 @@ INT_COLS = ['has_avx', 'bw_nvlink', 'cpu_cores', 'cpu_ram', 'hosting_type', 'dis
 
 STR_COLS = ['cpu_name', 'cuda_max_good', 'disk_name', 'driver_version',
                'gpu_name', 'mobo_name', 'public_ipaddr', 'country']
+
+FLOAT_COLS = []
 
 DROP_COLS = ['credit_balance', 'credit_discount', 'location', 'geolocation', 'bundle_id',
              'discount_rate', 'discounted_dph_total', 'discounted_hourly',
