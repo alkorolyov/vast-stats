@@ -80,7 +80,7 @@ def _get_raw(url, timeout) -> pd.DataFrame | None:
     _ts = r_dict.get('timestamp', time_utc_now())   # if time not present in raw, insert utc_now()
     ts = int(pd.to_datetime(_ts).timestamp())
 
-    raw = pd.DataFrame(r_dict["offers"])
+    raw = pd.DataFrame(r_dict['offers'])
     raw['timestamp'] = ts
     return raw
 
@@ -88,14 +88,14 @@ def _get_raw(url, timeout) -> pd.DataFrame | None:
 def fetch_single(source, max_tries=3) -> pd.DataFrame | None:
     # unpack params
     src_name, url, timeout = source['name'], source['url'], source['timeout']
-    logging.info(f"[API] fetching data from '{src_name}'")
+    logging.debug(f"[API] fetching data from '{src_name}'")
 
     for i in range(1, max_tries + 1):
         try:
             return _get_raw(url, timeout)
         except requests.exceptions.HTTPError as e:
             logging.warning(f"[API] failed to fetch data from '{src_name}': {e}")
-            logging.info(f'[API] attempt #{i}, retrying ...')
+            logging.debug(f'[API] attempt #{i}, retrying ...')
             sleep(const.RETRY_TIMEOUT)
 
     logging.warning(f'[API] Max attempts {max_tries} reached for {src_name}')

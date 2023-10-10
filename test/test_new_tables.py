@@ -1,7 +1,7 @@
 import sqlite3
 import pytest
 import pandas as pd
-from src.new_tables import SingleCol, Unique
+from src.new_tables import SingleTbl, Unique
 from src.manager import DbManager
 
 
@@ -14,11 +14,11 @@ def dbm():
     dbm.connect()
     yield dbm
     # test_conn.commit()
-    dbm.disconnect()
+    dbm.close()
 
 
 def test_ts_idx_create(dbm, capsys):
-    t = SingleCol('t', ['timestamp'], 'tmp')
+    t = SingleTbl('t', ['timestamp'], 'tmp')
     t.create(dbm)
     assert 't' in dbm.get_tables()
 
@@ -32,7 +32,7 @@ def test_ts_idx_create(dbm, capsys):
 def test_ts_idx_update(dbm, capsys):
     dbm.create_table('tmp', ['id', 'timestamp'])
     dbm.insert('tmp', [[1, 16], [2, 16]])
-    t = SingleCol('t', ['timestamp'], 'tmp')
+    t = SingleTbl('t', ['timestamp'], 'tmp')
     t.create(dbm)
     t.update(dbm)
 

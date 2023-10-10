@@ -19,7 +19,7 @@ def test_df_to_table(conn):
     df_to_tmp_table(df, 'tmp', conn)
 
     assert 'tmp' in get_tables(conn)
-    records = conn.execute('SELECT * FROM tmp').fetchall()
+    records = conn.execute('SELECT * FROM rent_snp').fetchall()
     assert len(records) == 1
     assert records[0][0] == 2   # id
     assert records[0][1] == 3   # machine_id

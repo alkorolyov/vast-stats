@@ -18,18 +18,24 @@ class DbManager:
     def connect(self):
         try:
             self.conn = sqlite3.connect(self.db_path) if self.db_path else sqlite3.connect(':memory:')
-            logging.info(f"Connected to the database '{self.db_path}'")
+            logging.debug(f"Connected to the database '{self.db_path}'")
         except sqlite3.Error as e:
             logging.error(f"Error connecting to the database '{self.db_path}': {e}")
             raise
 
-    def disconnect(self):
+    def close(self):
         if self.conn:
             self.conn.close()
-            logging.info(f"Disconnected from the database '{self.db_path}'.")
+            logging.debug(f"Closed connection to the database '{self.db_path}'.")
+        else:
+            logging.debug(f"Close connection to the database: no active connection")
 
     def execute(self, sql_query):
-        return self.conn.execute(sql_query)
+        try:
+            return self.conn.execute(sql_query)
+        except sqlite3.Error as e:
+            logging.error(f"Error executing sql command: {sql_query}\n{e}")
+            raise
 
     def commit(self):
         self.conn.commit()
@@ -84,7 +90,6 @@ class DbManager:
         except sqlite3.Error as e:
             logging.error(f"Error inserting rows into '{tbl_name}': {e}")
             raise
-
 
     def get_tables(self) -> list:
         res = self.conn.execute(f'''
@@ -156,6 +161,5 @@ class DbManager:
     def df_to_tmp_table(self, df, tbl_name):
         cols_str = ", ".join([c for c in df.columns])
         placeholder = ', '.join(['?'] * len(df.columns))
-
         self.conn.execute(f'CREATE TEMP TABLE IF NOT EXISTS {tbl_name} ({cols_str});')
         self.conn.executemany(f"INSERT INTO {tbl_name} VALUES ({placeholder})", df.values.tolist())

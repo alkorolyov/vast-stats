@@ -6,8 +6,9 @@ VAST_EXPORTER_BASEURL = 'https://500.farm/vastai-exporter'
 VAST_EXPORTER_TIMEOUT = 5
 VAST_API_BASEURL = 'https://console.vast.ai'
 VAST_API_TIMEOUT = 25   # vast-api takes longer to get response
+
 RETRY_TIMEOUT = 20      # timeout between failed retries
-TIMEOUT = 70            # main cycle timeout
+TIMEOUT = 50            # main cycle timeout
 
 # Define logging options
 LOG_FORMAT = '[%(asctime)s] [%(levelname)s] %(message)s'
@@ -27,7 +28,7 @@ INT_COLS = ['has_avx', 'bw_nvlink', 'cpu_cores', 'cpu_ram', 'hosting_type', 'dis
             ]
 
 STR_COLS = ['cpu_name', 'cuda_max_good', 'disk_name', 'driver_version',
-               'gpu_name', 'mobo_name', 'public_ipaddr', 'country', 'isp']
+            'gpu_name', 'mobo_name', 'public_ipaddr', 'country', 'isp']
 
 FLOAT_COLS = []
 
@@ -39,8 +40,7 @@ DROP_COLS = ['credit_balance', 'credit_discount', 'location', 'geolocation', 'bu
 # Group columns
 AVG_COLS = ['disk_bw', 'gpu_mem_bw', 'pcie_bw',
             'dlperf', 'inet_down', 'inet_up',
-            'score'
-            ]
+            'score']
 
 HARDWARE_COLS = ['compute_cap', 'total_flops',
                  'cpu_cores', 'cpu_name', 'has_avx',
