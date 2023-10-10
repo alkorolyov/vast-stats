@@ -58,6 +58,7 @@ def main():
     while True:
         start = time()
         try:
+            # TODO implement fetch from different sources
             machines = get_machines()
             # machines, offers = get_machines_offers()
 
