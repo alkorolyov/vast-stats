@@ -1,4 +1,6 @@
 
+
+
 # Define URL's and timeouts
 VAST_EXPORTER_BASEURL = 'https://500.farm/vastai-exporter'
 VAST_EXPORTER_TIMEOUT = 5
@@ -7,7 +9,10 @@ VAST_API_TIMEOUT = 25   # vast-api takes longer to get response
 RETRY_TIMEOUT = 20      # timeout between failed retries
 TIMEOUT = 70            # main cycle timeout
 
+# Define logging options
 LOG_FORMAT = '[%(asctime)s] [%(levelname)s] %(message)s'
+MAX_LOGSIZE = 1024 * 1024  # 1Mb
+LOG_COUNT = 3
 
 # Define column names and types for incoming data
 INT_COLS = ['has_avx', 'bw_nvlink', 'cpu_cores', 'cpu_ram', 'hosting_type', 'disk_space',
@@ -22,7 +27,7 @@ INT_COLS = ['has_avx', 'bw_nvlink', 'cpu_cores', 'cpu_ram', 'hosting_type', 'dis
             ]
 
 STR_COLS = ['cpu_name', 'cuda_max_good', 'disk_name', 'driver_version',
-               'gpu_name', 'mobo_name', 'public_ipaddr', 'country']
+               'gpu_name', 'mobo_name', 'public_ipaddr', 'country', 'isp']
 
 FLOAT_COLS = []
 
@@ -43,8 +48,9 @@ HARDWARE_COLS = ['compute_cap', 'total_flops',
                  'gpu_name', 'num_gpus', 'pci_gen', 'gpu_lanes', 'gpu_ram', 'bw_nvlink']
 
 EOD_COLS = ['cuda_max_good', 'driver_version', 'direct_port_count',
-            'country', 'verification',
-            'end_date', 'public_ipaddr', 'static_ip']
+            'min_chunk', 'verification', 'end_date',
+            'country', 'isp',
+            'public_ipaddr', 'static_ip']
 
 COST_COLS = ['dph_base', 'storage_cost', 'inet_up_cost',
              'inet_down_cost', 'min_bid', 'credit_discount_max']

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import pandas as pd
 import requests
@@ -57,7 +59,7 @@ def _get_sources():
     return sources
 
 
-def _get_raw(url, timeout) -> pd.DataFrame:
+def _get_raw(url, timeout) -> pd.DataFrame | None:
     r = requests.get(url, timeout=timeout)
     r.raise_for_status()
 
@@ -83,7 +85,7 @@ def _get_raw(url, timeout) -> pd.DataFrame:
     return raw
 
 
-def fetch_single(source, max_tries=3) -> pd.DataFrame:
+def fetch_single(source, max_tries=3) -> pd.DataFrame | None:
     # unpack params
     src_name, url, timeout = source['name'], source['url'], source['timeout']
     logging.info(f"[API] fetching data from '{src_name}'")
@@ -93,15 +95,14 @@ def fetch_single(source, max_tries=3) -> pd.DataFrame:
             return _get_raw(url, timeout)
         except requests.exceptions.HTTPError as e:
             logging.warning(f"[API] failed to fetch data from '{src_name}': {e}")
-            if i < max_tries:
-                logging.info(f'[API] attempt #{i}, retrying ...')
-                sleep(const.RETRY_TIMEOUT)
+            logging.info(f'[API] attempt #{i}, retrying ...')
+            sleep(const.RETRY_TIMEOUT)
 
     logging.warning(f'[API] Max attempts {max_tries} reached for {src_name}')
     return None
 
 
-def fetch(last_ts: int = 0) -> pd.DataFrame:
+def fetch(last_ts: int = 0) -> pd.DataFrame | None:
     sources = _get_sources()
     for source in sources:
         raw = fetch_single(source)

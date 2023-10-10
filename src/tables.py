@@ -6,56 +6,20 @@ from typing import List
 from pandas import DataFrame
 from src.utils import np_min_chunk
 from src.preprocess import split_raw, preprocess
+from src import const
 
 offers_url = 'https://500.farm/vastai-exporter/offers'
 machines_url = 'https://500.farm/vastai-exporter/machines'
 
-ALL_COLS = ['bundle_id', 'bw_nvlink', 'compute_cap', 'cpu_cores',
-            'cpu_cores_effective', 'cpu_name', 'cpu_ram', 'credit_balance',
-            'credit_discount', 'credit_discount_max', 'cuda_max_good',
-            'direct_port_count', 'discount_rate', 'discounted_dph_total',
-            'discounted_hourly', 'disk_bw', 'disk_name', 'disk_space', 'dlperf',
-            'dlperf_per_dphtotal', 'dph_base', 'driver_version', 'duration',
-            'end_date', 'flops_per_dphtotal', 'geolocation', 'gpu_display_active',
-            'gpu_frac', 'gpu_lanes', 'gpu_mem_bw', 'gpu_name', 'gpu_ram', 'has_avx',
-            'host_id', 'host_run_time', 'hosting_type', 'id', 'inet_down',
-            'inet_down_cost', 'inet_up', 'inet_up_cost', 'machine_id', 'min_bid',
-            'mobo_name', 'num_gpus', 'pci_gen', 'pcie_bw', 'public_ipaddr',
-            'reliability2', 'rentable', 'score', 'start_date', 'storage_cost',
-            'total_flops', 'verification', 'verified', 'timestamp']
 
-NUMERICAL = ['has_avx', 'bw_nvlink', 'cpu_cores', 'cpu_ram', 'hosting_type', 'disk_space',
-             'dlperf', 'score', 'verification', 'reliability',
-             'dph_base', 'storage_cost', 'inet_up_cost', 'inet_down_cost', 'min_bid', 'credit_discount_max',
-             'total_flops', 'disk_bw', 'gpu_mem_bw', 'inet_down',
-             'inet_up', 'hosting_type', 'pcie_bw', 'rented', 'static_ip',
-             'compute_cap', 'direct_port_count', 'end_date',
-             'gpu_display_active', 'gpu_lanes', 'gpu_ram', 'host_id',
-             'machine_id', 'id', 'min_chunk', 'num_gpus', 'pci_gen',
-             'num_gpus_rented', 'timestamp', 'dph_base',
-             ]
-
-CATEGORICAL = ['cpu_name', 'cuda_max_good', 'disk_name', 'driver_version',
-               'gpu_name', 'mobo_name', 'public_ipaddr', 'country']
-
-DROP_COLS = ['credit_balance', 'credit_discount', 'location', 'geolocation', 'bundle_id',
-             'discount_rate', 'discounted_dph_total', 'discounted_hourly',
-             'dlperf_per_dphtotal', 'duration', 'flops_per_dphtotal', 'start_date',
-             'verified', 'host_run_time', 'cpu_cores_effective', 'gpu_frac', 'chunks']
-
-AVG_COLS = ['disk_bw', 'gpu_mem_bw', 'pcie_bw',
-            'dlperf', 'inet_down', 'inet_up',
-            'score'
-            ]
 
 HARDWARE_COLS = ['compute_cap', 'total_flops',
                  'cpu_cores', 'cpu_name', 'has_avx',
                  'disk_name', 'hosting_type', 'mobo_name',
                  'gpu_name', 'num_gpus', 'pci_gen', 'gpu_lanes', 'gpu_ram', 'bw_nvlink']
 
-EOD_COLS = ['cuda_max_good', 'driver_version', 'direct_port_count',
-            'country', 'verification',
-            'end_date', 'public_ipaddr', 'static_ip']
+EOD_COLS = ['cuda_max_good', 'driver_version', 'direct_port_count', 'min_chunk',
+            'verification', 'end_date', 'public_ipaddr', 'static_ip', 'country', 'isp']
 
 COST_COLS = ['dph_base', 'storage_cost', 'inet_up_cost',
              'inet_down_cost', 'min_bid', 'credit_discount_max']
@@ -92,7 +56,9 @@ def get_machines_offers():
 
 
 def get_machines() -> DataFrame:
-    return _get_raw(machines_url)
+    df = _get_raw(machines_url)
+    preprocess(df)
+    return df
 
 
 def get_offers() -> DataFrame:
@@ -112,10 +78,12 @@ def _get_raw(url) -> pd.DataFrame:
 
 
 def _get_dtype(col_name: str) -> str:
-    if col_name in NUMERICAL:
+    if col_name in const.INT_COLS:
         return 'INTEGER'
-    if col_name in CATEGORICAL:
+    elif col_name in const.STR_COLS:
         return 'TEXT'
+    elif col_name in const.FLOAT_COLS:
+        return 'REAL'
     raise ValueError(f'Column name {col_name} not found in NUMERICAL or CATEGORICAL column lists')
 
 

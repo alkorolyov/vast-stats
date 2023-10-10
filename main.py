@@ -8,20 +8,15 @@ from logging.handlers import RotatingFileHandler
 from time import sleep, time
 # from memory_profiler import profile
 
-from src.tables import get_machines_offers, df_to_tmp_table, COST_COLS, HARDWARE_COLS, \
-    EOD_COLS, AVG_COLS, \
-    Timeseries, MapTable, Table, OnlineTS, MachineSplit, AverageStd
-from src.preprocess import preprocess, split_raw
-from src.utils import time_ms, time_utc_now
+from src import const
+from src.const import TIMEOUT, RETRY_TIMEOUT, LOG_FORMAT, MAX_LOGSIZE, LOG_COUNT
+from src.tables import get_machines, df_to_tmp_table, \
+     \
+    Timeseries, MapTable, Table, OnlineTS, AverageStd
+from src.utils import time_ms
 
 pd.set_option('display.max_rows', 500)
 pd.set_option('display.max_columns', 50)
-
-TIMEOUT = 70  # Timeout between requests
-RETRY_TIMEOUT = 20  # Timeout between unsuccessful attempts
-LOG_FORMAT = '[%(asctime)s] [%(levelname)s] %(message)s'
-MAX_LOGSIZE = 1024 * 1024  # 1Mb
-LOG_COUNT = 3
 
 
 def main():
@@ -40,23 +35,23 @@ def main():
     host_machine = MapTable('host_machine_map', 'machines', ['machine_id', 'host_id'])
     online = OnlineTS('online', 'host_machine_map')
     # new_online = NewOnlineTS('new_online', 'host_machine_map')
-    machine_split = MachineSplit('machine_split', ['machine_id', 'num_gpus'], 'offers')
+    # machine_split = MachineSplit('machine_split', ['machine_id', 'num_gpus'], 'offers')
     cpu_ram = Timeseries('cpu_ram', ['cpu_ram'])
     disk = Timeseries('disk', ['disk_space'])
     reliability = Timeseries('reliability', ['reliability'])
-    rent = Timeseries('rent', ['machine_id', 'rented'], 'offers')
+    rent = Timeseries('rent', ['num_gpus_rented'])
 
     # Aggregated Tables
-    hardware = Timeseries('hardware', HARDWARE_COLS)
-    eod = Timeseries('eod', EOD_COLS)
-    cost = Timeseries('cost', COST_COLS)
-    avg = AverageStd('avg', AVG_COLS, period='1 d')
+    hardware = Timeseries('hardware', const.HARDWARE_COLS)
+    eod = Timeseries('eod', const.EOD_COLS)
+    cost = Timeseries('cost', const.COST_COLS)
+    avg = AverageStd('avg', const.AVG_COLS, period='5 min')
     ts = Table('timestamp_tbl')
 
     tables = [
         host_machine, online,
         # new_online,
-        machine_split,
+        # machine_split,
         hardware,
         cpu_ram, disk,
         eod,
@@ -66,18 +61,6 @@ def main():
         avg,
         ts
     ]
-
-    # for col in HARDWARE_COLS:
-    #     tables.append(Timeseries(col, [col]))
-    # for col in EOD_COLS:
-    #     tables.append(Timeseries(col, [col]))
-    # for col in COST_COLS:
-    #     tables.append(Timeseries(col, [col]))
-    # for col in AVG_COLS:
-    #     tables.append(Timeseries(col, [col]))
-    #
-    # tables.append(Timeseries('inet_up', ['inet_up']))
-    # tables.append(Timeseries('inet_down', ['inet_down']))
 
     # logging
     log_handler = None
@@ -89,6 +72,7 @@ def main():
 
     logging.basicConfig(format=LOG_FORMAT,
                         handlers=log_handler,
+                        # level=logging.DEBUG,
                         level=logging.INFO,
                         datefmt='%d-%m-%Y %I:%M:%S')
 
@@ -97,6 +81,7 @@ def main():
     conn = sqlite3.connect(db_file)
 
     for table in tables:
+        logging.debug(table.name)
         table.init_db(conn)
 
     conn.commit()
@@ -106,7 +91,9 @@ def main():
         start = time()
         try:
             logging.info('[API] request started')
-            machines, offers = get_machines_offers()
+            machines = get_machines()
+            # machines, offers = get_machines_offers()
+
 
             # offers = get_offers()
             # preprocess(offers)
@@ -144,7 +131,7 @@ def main():
 
         # timestamp = time_utc_now()
 
-        if offers.timestamp.iloc[0] == last_timestamp:
+        if machines.timestamp.iloc[0] == last_timestamp:
             logging.warning(f'[API] snapshot already saved {time() - start:.2f}s')
             conn.close()
             sleep(RETRY_TIMEOUT)
@@ -154,7 +141,7 @@ def main():
 
         start = time()
 
-        df_to_tmp_table(offers, 'tmp_offers', conn)
+        # df_to_tmp_table(offers, 'tmp_offers', conn)
         df_to_tmp_table(machines, 'tmp_machines', conn)
         logging.info(f'[TMP_TABLES] created in {time_ms(time() - start)}ms')
 

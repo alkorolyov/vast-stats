@@ -32,18 +32,21 @@ def _round_ram(cpu_ram: pd.Series):
     return res.astype(int)
 
 
-def _add_country(raw: pd.DataFrame):
+def _get_isp(raw: pd.DataFrame):
+    return raw.location.apply(lambda x: x.get('isp', None) if not pd.isna(x) else None)
+
+def _get_country(raw: pd.DataFrame):
     """ `location` is more accurate than `geolocation`:
         set country based on `location` then for missing add from `geolocation`
     """
-    country_geoloc = raw.geolocation.str.split(',').apply(lambda x: x[-1] if x else None).str.strip().replace('Sweden', 'SE')
-    raw['country'] = country_geoloc
+    country_code = raw.geolocation.str.split(',').apply(lambda x: x[-1] if x else None).str.strip().replace('Sweden', 'SE')
+    return country_code
 
     # raw.loc[raw.location.isna(), 'location'] = None
     # country_loc = raw.location.apply(lambda x: x['country'] if x else None)
     # raw['country'] = country_loc
     # mask = raw.country.isna()
-    # raw.loc[mask, 'country'] = country_geoloc[mask]
+    # raw.loc[mask, 'country'] = country_code[mask]
 
 
 def _fillna(raw: pd.DataFrame):
@@ -144,7 +147,9 @@ def _get_machines(raw, slice_idx):
 
 
 def preprocess(raw: pd.DataFrame):
-    _add_country(raw)
+    raw['isp'] = _get_isp(raw)
+    raw['country'] = _get_country(raw)
+
     _fillna(raw)
     _rename_cols(raw)
 
@@ -164,6 +169,7 @@ def preprocess(raw: pd.DataFrame):
     # End Of Day data
     raw.verification = raw.verification.map(VERIFIED_ENUM)
     raw.end_date = round_day(raw.end_date)
+
 
     # Reliability * 1e4
     raw.reliability = raw.reliability * 1e4

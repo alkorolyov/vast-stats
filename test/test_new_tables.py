@@ -1,7 +1,7 @@
 import sqlite3
 import pytest
 import pandas as pd
-from src.new_tables import Table, MapTable
+from src.new_tables import SingleCol, Unique
 from src.manager import DbManager
 
 
@@ -17,8 +17,8 @@ def dbm():
     dbm.disconnect()
 
 
-def test_ts_table_create(dbm, capsys):
-    t = Table('t', ['timestamp'], 'tmp')
+def test_ts_idx_create(dbm, capsys):
+    t = SingleCol('t', ['timestamp'], 'tmp')
     t.create(dbm)
     assert 't' in dbm.get_tables()
 
@@ -29,10 +29,10 @@ def test_ts_table_create(dbm, capsys):
     assert info.pk[0] == 1
 
 
-def test_ts_table_update(dbm, capsys):
+def test_ts_idx_update(dbm, capsys):
     dbm.create_table('tmp', ['id', 'timestamp'])
     dbm.insert('tmp', [[1, 16], [2, 16]])
-    t = Table('t', ['timestamp'], 'tmp')
+    t = SingleCol('t', ['timestamp'], 'tmp')
     t.create(dbm)
     t.update(dbm)
 
@@ -49,28 +49,26 @@ def test_ts_table_update(dbm, capsys):
     assert dbm.table_tolist('t') == [[16], [32]]
 
 
-def test_map_table_create(dbm, capsys):
-    t = MapTable('map', ['id', 'sid'], 'tmp')
+def test_uniq_tbl_create(dbm, capsys):
+    t = Unique('map', ['col1', 'col2'], 'tmp', 'id')
     t.create(dbm)
 
     assert 'map' in dbm.get_tables()
     info = dbm.get_tbl_info('map')
-    assert 'id' in info['name'].values
-    assert 'sid' in info['name'].values
-    assert 'timestamp' in info['name'].values
+    assert ['id', 'col1', 'col2', 'timestamp'] == list(info['name'])
     # with capsys.disabled():
     #     print(info['name'].values)
     #     print()
     #     print(dbm.execute('SELECT * FROM map').fetchall())
 
 
-def test_map_table_update(dbm, capsys):
-    dbm.create_table('tmp', ['id', 'sid', 'timestamp'])
+def test_uniq_tbl_update(dbm, capsys):
+    dbm.create_table('tmp', ['id', 'col1', 'timestamp'])
     dbm.insert('tmp', [
         [1, 1, 16],
         [2, 3, 16],
     ])
-    t = MapTable('map', ['id', 'sid'], 'tmp')
+    t = Unique('map', ['col1'], 'tmp', 'id')
     t.create(dbm)
     t.update(dbm)
     rows = dbm.table_tolist('map')
@@ -80,8 +78,8 @@ def test_map_table_update(dbm, capsys):
     ]
 
 
-def test_map_table_update_new_ts(dbm, capsys):
-    t = MapTable('t', ['id', 'sid'], 'tmp')
+def test_uniq_tbl_update_new_ts(dbm, capsys):
+    t = Unique('t', ['col1'], 'tmp', 'id')
     t.create(dbm)
     dbm.insert('t', [
         [1, 1, 16],
@@ -92,7 +90,7 @@ def test_map_table_update_new_ts(dbm, capsys):
     #     print(dbm.get_tbl_info('t'))
     #     print(dbm.table_tolist('t'))
 
-    dbm.create_table('tmp', ['id', 'sid', 'timestamp'])
+    dbm.create_table('tmp', ['id', 'col1', 'timestamp'])
     dbm.insert('tmp', [
         [2, 3, 18],
     ])
@@ -104,27 +102,47 @@ def test_map_table_update_new_ts(dbm, capsys):
     ]
 
 
-def test_map_table_update_new_value(dbm, capsys):
-    t = MapTable('t', ['id', 'sid'], 'tmp')
+def test_uniq_tbl_update_new_value(dbm, capsys):
+    t = Unique('t', ['col1'], 'tmp', 'id')
     t.create(dbm)
     dbm.insert('t', [
         [1, 1, 16],
-        [2, 3, 16],
+        [2, 4, 16],
     ])
-    dbm.create_table('tmp', ['id', 'sid', 'timestamp'])
+    dbm.create_table('tmp', ['id', 'col1', 'timestamp'])
     dbm.insert('tmp', [
         [1, 1, 22],
-        [2, 4, 22],
+        [3, 4, 22],
     ])
     t.update(dbm)
     rows = dbm.table_tolist('t')
     assert rows == [
         [1, 1, 16],
-        [2, 3, 16],
-        [2, 4, 22],
+        [2, 4, 16],
+        [3, 4, 22],
     ]
 
 
+def test_uniq_tbl_update_multi_vals(dbm, capsys):
+    t = Unique('t', ['col1'], 'tmp', 'id')
+    t.create(dbm)
+    dbm.insert('t', [
+        [1, 1, 16],
+        [2, 1, 16],
+    ])
+    dbm.create_table('tmp', ['id', 'col1', 'timestamp'])
+    dbm.insert('tmp', [
+        [3, 1, 22],
+        [4, 1, 22],
+    ])
+    t.update(dbm)
+    rows = dbm.table_tolist('t')
+    assert rows == [
+        [1, 1, 16],
+        [2, 1, 16],
+        [3, 1, 22],
+        [4, 1, 22],
+    ]
 
 
 
