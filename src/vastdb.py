@@ -11,6 +11,7 @@ from src.manager import DbManager
 from src.new_tables import _Table, SingleTbl, MapTable, OnlineTS, Timeseries, AverageStd
 from src.utils import time_ms
 
+
 class VastDB:
     """ Class responsible for the Vast database structure """
     dbm: DbManager
@@ -86,7 +87,6 @@ class VastDB:
             start = time()
             rows = tbl.update(self.dbm)
             total_rows += rows
-            # if rows:
             logging.debug(f'[{tbl.name.upper()}] {rows} rows updated in {time_ms(time() - start)}ms')
         return total_rows
 

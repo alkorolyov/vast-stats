@@ -93,7 +93,8 @@ def np_group_by(raw: pd.DataFrame, value_col: str, ufunc):
     # slice_idx = np.r_[0, np.flatnonzero(np.diff(machine_ids)) + 1]
     slice_idx = np.diff(machine_ids).nonzero()[0] + 1
     slice_idx = np.hstack([0, slice_idx])    # insert zero at the beginning of arr
-    return machine_ids[slice_idx], ufunc.reduceat(vals, slice_idx)
+    # return machine_ids[slice_idx], ufunc.reduceat(vals, slice_idx)
+    return ufunc.reduceat(vals, slice_idx)
 
 
 def np_min_chunk(raw: pd.DataFrame) -> pd.DataFrame:

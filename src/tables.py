@@ -64,6 +64,7 @@ def get_machines() -> DataFrame:
 def get_offers() -> DataFrame:
     raw = _get_raw(offers_url)
     df = np_min_chunk(raw).reset_index(drop=True)
+    preprocess(df)
     return df
 
 
