@@ -71,7 +71,7 @@ echo -e "$SERVICE_CONTENT" > /etc/systemd/system/$SERVICE_NAME.service
 
 echo "=> Start service"
 systemctl daemon-reload
-systemctl start $SERVICE_NAME
+systemctl restart $SERVICE_NAME
 sleep 5
 
 # check service status
