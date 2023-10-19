@@ -49,6 +49,8 @@ sudo -u $USER python3 -m pip -q install -r requirements.txt
 
 echo "=> Create service"
 
+SERVICE_NAME='vast-stats'
+
 SERVICE_CONTENT="
 [Unit]
 Description=VastAi Stats Service
@@ -65,7 +67,6 @@ ExecStart=python3 $INSTALL_DIR/main.py --db_path $DATA_DIR --log_path $DATA_DIR
 [Install]
 WantedBy=multi-user.target
 "
-SERVICE_NAME='vast-stats'
 
 echo -e "$SERVICE_CONTENT" > /etc/systemd/system/$SERVICE_NAME.service
 

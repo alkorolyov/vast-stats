@@ -6,7 +6,7 @@ from time import time
 
 import pandas as pd
 
-from src import const
+from src.const import HARDWARE_COLS, COST_COLS, EOD_COLS, AVG_COLS
 from src.manager import DbManager
 from src.tables import _Table, SingleTbl, MapTable, OnlineTS, Timeseries, AverageStd
 from src.utils import time_ms
@@ -56,10 +56,10 @@ class VastDB:
         rent = Timeseries('rent', ['num_gpus_rented'])
 
         # Aggregated Tables
-        hardware = Timeseries('hardware', const.HARDWARE_COLS)
-        eod = Timeseries('eod', const.EOD_COLS)
-        cost = Timeseries('cost', const.COST_COLS)
-        avg = AverageStd('avg', const.AVG_COLS, period='1 D')
+        hardware = Timeseries('hardware', HARDWARE_COLS)
+        eod = Timeseries('eod', EOD_COLS)
+        cost = Timeseries('cost', COST_COLS)
+        avg = AverageStd('avg', AVG_COLS, period='1 day')
 
         self.tables += [
             online,

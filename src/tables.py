@@ -244,7 +244,7 @@ class Timeseries(_Table):
 
 
 class AverageStd(Timeseries):
-    def __init__(self, name: str, cols: list, source: str = 'tmp_machines', period: str = '5 min'):
+    def __init__(self, name: str, cols: list, source: str = 'tmp_machines', period: str = '1 day'):
         super().__init__(name, cols, source)
         self.period = period
         self.cols_avg_std = f"{', '.join([f'{c}_avg, {c}_std' for c in cols])}"
@@ -269,8 +269,8 @@ class AverageStd(Timeseries):
         ts = dbm.get_last_ts(self.source)
         last_ts = dbm.get_last_ts(self.snapshot)
 
-        period = int(pd.to_timedelta(self.period).total_seconds())
-        period_end = math.ceil(last_ts / period) * period
+        period_sec = int(pd.to_timedelta(self.period).total_seconds())
+        period_end = math.ceil(last_ts / period_sec) * period_sec
 
         rowcount = 0
 
@@ -278,12 +278,13 @@ class AverageStd(Timeseries):
         if ts >= period_end:
             rowcount = self._write_mean_std(dbm, period_end)
             self._clear_snapshot(dbm)
+            logging.debug(f"[{self.name.upper()}] Average calculated over '{self.period}'")
 
         self._write_snapshot(dbm)
 
         return rowcount
 
-    def _write_mean_std(self, dbm, ts):
+    def _write_mean_std(self, dbm, period_end: int):
         dbm.conn.create_function('sqrt', 1, math.sqrt)
 
         avg_std_calc = f', \n\r'.join([
@@ -301,7 +302,7 @@ class AverageStd(Timeseries):
         SELECT
             {self.key_col}, 
             {avg_std_calc},
-            timestamp
+            {period_end}
         FROM {self.snapshot}
         GROUP BY {self.key_col}
         '''
