@@ -1,81 +1,10 @@
+import logging
 import math
-import requests
+
 import pandas as pd
-from typing import List
 
-from pandas import DataFrame
-from src.utils import np_min_chunk
-from src.preprocess import split_raw, preprocess
+from src.manager import DbManager
 from src import const
-
-offers_url = 'https://500.farm/vastai-exporter/offers'
-machines_url = 'https://500.farm/vastai-exporter/machines'
-
-
-
-HARDWARE_COLS = ['compute_cap', 'total_flops',
-                 'cpu_cores', 'cpu_name', 'has_avx',
-                 'disk_name', 'hosting_type', 'mobo_name',
-                 'gpu_name', 'num_gpus', 'pci_gen', 'gpu_lanes', 'gpu_ram', 'bw_nvlink']
-
-EOD_COLS = ['cuda_max_good', 'driver_version', 'direct_port_count', 'min_chunk',
-            'verification', 'end_date', 'public_ipaddr', 'static_ip', 'country', 'isp']
-
-COST_COLS = ['dph_base', 'storage_cost', 'inet_up_cost',
-             'inet_down_cost', 'min_bid', 'credit_discount_max']
-
-
-def df_to_table(df, tbl_name, conn):
-    cols = ", ".join([c for c in df.columns])
-    values = ('?, ' * len(df.columns))[:-2]
-
-    conn.execute(f'CREATE TABLE IF NOT EXISTS {tbl_name} ({cols});')
-    conn.executemany(f"INSERT INTO {tbl_name} VALUES ({values})", df.values.tolist())
-
-
-def df_to_tmp_table(df, tbl_name, conn):
-    cols = ", ".join([c for c in df.columns])
-    values = ('?, ' * len(df.columns))[:-2]
-
-    conn.execute(f'CREATE TEMP TABLE IF NOT EXISTS {tbl_name} ({cols});')
-    conn.executemany(f"INSERT INTO {tbl_name} VALUES ({values})", df.values.tolist())
-
-
-def create_tmp_tables(conn):
-    raw = _get_raw(offers_url)
-    preprocess(raw)
-    machines, offers = split_raw(raw)
-    df_to_tmp_table(offers, 'tmp_offers', conn)
-    df_to_tmp_table(machines, 'tmp_machines', conn)
-
-
-def get_machines_offers():
-    raw = _get_raw(offers_url)
-    preprocess(raw)
-    return split_raw(raw)
-
-
-def get_machines() -> DataFrame:
-    df = _get_raw(machines_url)
-    preprocess(df)
-    return df
-
-
-def get_offers() -> DataFrame:
-    raw = _get_raw(offers_url)
-    df = np_min_chunk(raw).reset_index(drop=True)
-    preprocess(df)
-    return df
-
-
-def _get_raw(url) -> pd.DataFrame:
-    r = requests.get(url, timeout=5)
-    r.raise_for_status()
-
-    ts = int(pd.to_datetime(r.json()['timestamp']).timestamp())
-    raw = pd.DataFrame(r.json()["offers"])
-    raw['timestamp'] = ts
-    return raw
 
 
 def _get_dtype(col_name: str) -> str:
@@ -85,88 +14,126 @@ def _get_dtype(col_name: str) -> str:
         return 'TEXT'
     elif col_name in const.FLOAT_COLS:
         return 'REAL'
-    raise ValueError(f'Column name {col_name} not found in NUMERICAL or CATEGORICAL column lists')
+    else:
+        return ''
+    # raise ValueError(f'Error getting column dtype: {col_name} not found')
 
 
 class _Table:
     """
     Base Class for SQL tables.
-    Each table has a name and must implement two methods,
-    init_db, write_db.
+    Extracts data from the temporary source table from memory
+    and writes it to database. Each table must implement two methods:
+    create(), update().
     """
-    name: str  # Table name
-    cols_list: List[str]  # list of column names
+    name: str                   # table name
+    cols: list[str]             # list of column names
+    source: str                 # name of the temporary source table
 
-    def __init__(self, name: str, cols: list = None):
+    def __init__(self, name: str, cols: list = None, source: str = None):
         self.name = name
-        self.cols_list = cols
+        self.cols = cols
+        self.source = source
 
-    def init_db(self, sql_conn):
+    def create(self, dbm: DbManager):
         """
-        General method to create new tables in database
-        """
-        pass
-
-    def write_db(self, sql_conn):
-        """
-        General method to write data to database
+        General method to create new table in database
         """
         pass
 
+    def update(self, dbm: DbManager):
+        """
+        General method to update data in database
+        """
+        pass
 
-class Table(_Table):
+
+class SingleTbl(_Table):
     """
-    Simple table with single value, acting as a primary key.
-    Value taken from tmp_table.
+    A Simple table with one column as a primary key.
+    First row from the source tmp column is taken.
     """
 
-    def __init__(self, name):
-        super().__init__(name)
-        self.tmp_table = 'tmp_machines'
+    def __init__(self, name, cols, source='tmp_machines'):
+        super().__init__(name, cols, source)
+        if len(cols) != 1:
+            raise ValueError(f'Error creating Table {name}: single column required')
+        self.col_name = self.cols[0]
 
-    def init_db(self, conn):
-        conn.execute(f'''
+    def create(self, dbm):
+        # dbm.create_table(self.name, self.cols)
+        dbm.execute(f'''
             CREATE TABLE IF NOT EXISTS {self.name} (
-            timestamp INTEGER PRIMARY KEY
+            {self.col_name} {_get_dtype(self.col_name)} PRIMARY KEY
             )
         ''')
 
-    def write_db(self, conn):
-        conn.execute(f'''
+    def update(self, dbm) -> int:
+        rowcount = dbm.execute(f'''
             INSERT OR IGNORE INTO {self.name}
-            SELECT timestamp FROM {self.tmp_table}
-            LIMIT 1
-        ''')
-        return 0
+            SELECT DISTINCT {self.col_name} FROM {self.source}
+        ''').rowcount
+        return rowcount
 
 
 class MapTable(_Table):
-    def __init__(self, name: str, source: str, cols: list):
-        super().__init__(name, cols)
+    def __init__(self, name,  cols, source='tmp_machines'):
+        super().__init__(name, cols, source)
         if len(cols) != 2:
             raise ValueError(f'Table error: two columns expected, got {len(cols)}')
         self.key_col = cols[0]
-        self.sec_key = cols[1]
+        self.val_col = cols[1]
 
-        if source == 'machines':
-            self.tmp_table = 'tmp_machines'
-        elif source == 'offers':
-            self.tmp_table = 'tmp_offers'
-        else:
-            raise ValueError(f'Table creation: source must be machines or offers, got {source}')
-
-    def init_db(self, conn):
-        conn.execute(f'''
+    def create(self, dbm):
+        dbm.execute(f'''
             CREATE TABLE IF NOT EXISTS {self.name} (
             {self.key_col} {_get_dtype(self.key_col)} PRIMARY KEY, 
-            {self.sec_key} {_get_dtype(self.sec_key)}
+            {self.val_col} {_get_dtype(self.val_col)}
             )
         ''')
 
-    def write_db(self, conn) -> int:
-        rowcount = conn.execute(f'''
-        INSERT OR IGNORE INTO {self.name} ({self.key_col}, {self.sec_key})
-        SELECT t.{self.key_col}, t.{self.sec_key} FROM {self.tmp_table} t
+    def update(self, dbm) -> int:
+        rowcount = dbm.execute(f'''
+        INSERT OR IGNORE INTO {self.name} ({self.key_col}, {self.val_col})
+        SELECT t.{self.key_col}, t.{self.val_col} FROM {self.source} t
+        ''').rowcount
+        return rowcount
+
+
+class Unique(_Table):
+    """
+    Unique key table, which stores a history of unique keys with additional value columns.
+    Each time a new key is found in source table it is stored with value columns and timestamp.
+    If key is already present in table - nothing is done.
+    """
+    def __init__(self, name: str, cols: list, source: str, key_col: str):
+        super().__init__(name, cols, source)
+        self.key_col = key_col
+        self.cols_str = f"{', '.join([c for c in cols])}"
+        self.t_cols = f"{', '.join([f't.{c}' for c in cols])}"
+        self.cols_dtypes = f"{', '.join([f'{c} {_get_dtype(c)}' for c in cols])}"
+
+    def create(self, dbm):
+        dbm.execute(f'''
+            CREATE TABLE IF NOT EXISTS {self.name} ( 
+            {self.key_col} INTEGER,
+            {self.cols_dtypes},            
+            timestamp INTEGER
+            )
+        ''')
+
+    def update(self, dbm) -> int:
+        # rowcount = dbm.execute(f'''
+        #     INSERT OR IGNORE INTO {self.name} ({self.key_col}, {self.val_col})
+        #     SELECT t.{self.key_col}, t.{self.val_col} FROM {self.source} t
+        # ''').rowcount
+        rowcount = dbm.execute(f'''
+            INSERT OR IGNORE INTO {self.name}
+            ({self.key_col}, {self.cols_str}, timestamp)
+            SELECT t.{self.key_col}, {self.t_cols}, t.timestamp 
+            FROM {self.source} AS t
+            LEFT JOIN {self.name} AS t2 ON t.{self.key_col} = t2.{self.key_col}
+            WHERE t2.{self.key_col} IS NULL
         ''').rowcount
         return rowcount
 
@@ -180,7 +147,7 @@ class Timeseries(_Table):
     - tablename_ts: This table captures the time-series data containing only the altered values.
     - tablename_snp: This table holds the most recent snapshot of the time-series.
 
-    The process involves invoking the write_db() method. When this method is called, the new values
+    The process involves invoking the update() method. When this method is called, the new values
     from the temporary table are compared against the latest snapshot. If any modifications are
     detected, only the changes are recorded within the timeseries table, and the snapshot is updated.
 
@@ -189,28 +156,22 @@ class Timeseries(_Table):
     """
 
     # SQL helper strings
-    cols: str  # value columns string: 'col1, col2, ...'
+    cols_str: str  # value columns string: 'col1, col2, ...'
     t_cols: str  # 't.col1, t.col2, ...'
     cols_dtypes: str  # 'col1 INTEGER, col2 TEXT ...'
     key_col: str  # primary key column name
-    tmp_table: str  # source temp table name
+    source: str  # source temp table name
     from_altered: str  # sql expression to select only altered values
 
     timeseries: str  # table name for timeseries
     snapshot: str  # table name for snapshot
 
-    def __init__(self, name: str, cols: list, source: str = 'machines'):
-        super().__init__(name, cols)
-        if source == 'machines':
-            self.key_col = 'machine_id'
-            self.tmp_table = 'tmp_machines'
-        elif source == 'offers':
-            self.key_col = 'id'
-            self.tmp_table = 'tmp_offers'
-        else:
-            raise ValueError(f'Table creation: source must be machines or offers, got {source}')
+    def __init__(self, name, cols, source='tmp_machines', key_col='machine_id'):
+        super().__init__(name, cols, source)
 
-        self.cols = f"{', '.join([c for c in cols])}"
+        self.key_col = key_col
+
+        self.cols_str = f"{', '.join([c for c in cols])}"
         self.t_cols = f"{', '.join([f't.{c}' for c in cols])}"
 
         self.cols_dtypes = f"{', '.join([f'{c} {_get_dtype(c)}' for c in cols])}"
@@ -219,90 +180,115 @@ class Timeseries(_Table):
         self.snapshot = name + '_snp'
 
         self.from_altered = f'''         
-        FROM {self.tmp_table} t
+        FROM {self.source} t
         WHERE 
-            ({self.key_col}, {self.cols}) NOT IN 
-            (SELECT {self.key_col}, {self.cols} FROM {self.snapshot})
+            ({self.key_col}, {self.cols_str}) NOT IN 
+            (SELECT {self.key_col}, {self.cols_str} FROM {self.snapshot})
         '''
 
-    def init_db(self, conn):
-        conn.execute(f''' 
+    def create(self, dbm):
+        dbm.execute(f''' 
         CREATE TABLE IF NOT EXISTS {self.timeseries} (
             {self.key_col} INTEGER, 
             {self.cols_dtypes}, 
-            timestamp INTEGER,
-            FOREIGN KEY (timestamp)
-                REFERENCES timestamp_tbl (timestamp)
+            timestamp INTEGER
+--             FOREIGN KEY (timestamp)
+--                 REFERENCES timestamp_tbl (timestamp)
             ) 
         ''')
-        conn.execute(f'''
+        dbm.execute(f'''
         CREATE TABLE IF NOT EXISTS {self.snapshot} (
              {self.key_col} INTEGER PRIMARY KEY, 
              {self.cols_dtypes}
              )
         ''')
 
-    def write_db(self, conn) -> int:
-        rowcount = self._insert_timeseries(conn)
-        self._update_snapshot(conn)
+    def update(self, dbm) -> int:
+        rowcount = self._insert_timeseries(dbm)
+        self._update_snapshot(dbm)
         return rowcount
 
-    def _insert_timeseries(self, conn):
-        rowcount = conn.execute(f''' 
-        INSERT INTO {self.timeseries} ({self.key_col}, {self.cols}, timestamp)
+    def _insert_timeseries(self, dbm):
+        rowcount = dbm.execute(f''' 
+        INSERT INTO {self.timeseries} ({self.key_col}, {self.cols_str}, timestamp)
         SELECT t.{self.key_col}, {self.t_cols}, t.timestamp
         {self.from_altered}
         ''').rowcount
         return rowcount
 
-    def _update_snapshot(self, conn):
-        conn.execute(f'''
-        INSERT OR REPLACE INTO {self.snapshot} ({self.key_col}, {self.cols})
+        # rowcount = dbm.execute(f'''
+        # WITH altered AS (
+        #     SELECT t.{self.key_col}, {self.t_cols}, t.timestamp
+        #     FROM {self.source} t
+        #     WHERE
+        #         ({self.key_col}, {self.cols_str}) NOT IN
+        #         (SELECT {self.key_col}, {self.cols_str} FROM {self.snapshot})
+        # )
+        # INSERT INTO {self.timeseries}
+        # SELECT * FROM altered
+        # ''').rowcount
+        # return rowcount
+
+    def _update_snapshot(self, dbm):
+        # dbm.clear_table(self.snapshot)
+        # dbm.execute(f'''
+        # INSERT INTO {self.snapshot} ({self.key_col}, {self.cols_str})
+        # SELECT {self.key_col}, {self.cols_str} FROM {self.source}
+        # ''')
+        dbm.execute(f'''
+        INSERT OR REPLACE INTO {self.snapshot} ({self.key_col}, {self.cols_str})
         SELECT t.{self.key_col}, {self.t_cols}
         {self.from_altered}
         ''')
 
 
 class AverageStd(Timeseries):
-    def __init__(self, name: str, cols: list, source: str = 'machines', period: str = '5 min'):
+    def __init__(self, name: str, cols: list, source: str = 'tmp_machines', period: str = '5 min'):
         super().__init__(name, cols, source)
-        self.period = pd.to_timedelta(period)
+        self.period = period
         self.cols_avg_std = f"{', '.join([f'{c}_avg, {c}_std' for c in cols])}"
         self.cols_avg_std_dtypes = f"{', '.join([f'{c}_avg INTEGER, {c}_std REAL' for c in cols])}"
 
-    def init_db(self, conn):
-        conn.execute(f''' 
+    def create(self, dbm):
+        dbm.execute(f''' 
         CREATE TABLE IF NOT EXISTS {self.timeseries} (
             {self.key_col} INTEGER, 
             {self.cols_avg_std_dtypes}, 
             timestamp INTEGER) 
         ''')
 
-        conn.execute(f''' 
+        dbm.execute(f''' 
         CREATE TABLE IF NOT EXISTS {self.snapshot} (
             {self.key_col} INTEGER, 
             {self.cols_dtypes}, 
             timestamp INTEGER) 
         ''')
 
-    def write_db(self, conn):
-        self._write_snapshot(conn)
-        timespan = get_tbl_timespan(self.snapshot, conn)
+    def update(self, dbm):
+        ts = int(dbm.execute(f'SELECT timestamp FROM {self.source} LIMIT 1').fetchall()[0][0])
+        last_ts = int(dbm.execute(f'SELECT timestamp FROM {self.snapshot} LIMIT 1').fetchall()[0][0])
 
-        if timespan > self.period:
-            rowcount = self._write_mean_std(conn)
-            self._clear_snapshot(conn)
-            return rowcount
+        period = int(pd.to_timedelta(self.period).total_seconds())
+        period_end = math.ceil(last_ts / period) * period
 
-        return 0
+        rowcount = 0
 
-    def _write_mean_std(self, conn):
-        conn.create_function('sqrt', 1, math.sqrt)
+        # check period logic
+        if ts >= period_end:
+            rowcount = self._write_mean_std(dbm, period_end)
+            self._clear_snapshot(dbm)
+
+        self._write_snapshot(dbm)
+
+        return rowcount
+
+    def _write_mean_std(self, dbm, ts):
+        dbm.conn.create_function('sqrt', 1, math.sqrt)
 
         avg_std_calc = f', \n\r'.join([
             f'ROUND(AVG({c})),\n\r'
             f'ROUND(sqrt(AVG({c} * {c}) - AVG({c}) * AVG({c})), 2)'
-            for c in self.cols_list
+            for c in self.cols
         ])
 
         sql_expression = f'''
@@ -320,11 +306,11 @@ class AverageStd(Timeseries):
         '''
 
         # print(sql_expression)
-        rowcount = conn.execute(sql_expression).rowcount
+        rowcount = dbm.execute(sql_expression).rowcount
         return rowcount
 
         # # calculate mean, std
-        # df = table_to_df(self.snapshot, conn)
+        # df = table_to_df(self.snapshot, dbm)
         # cols = self.cols_list + [self.key_col]
         # mean_df = df[cols].groupby(self.key_col).mean()
         # std_df = df[cols].groupby(self.key_col).std()
@@ -345,58 +331,34 @@ class AverageStd(Timeseries):
         #
         #
         # # write to sql
-        # df_.to_sql(self.timeseries, conn, if_exists='append')
+        # df_.to_sql(self.timeseries, dbm, if_exists='append')
 
     def _write_snapshot(self, conn):
         conn.execute(f'''        
             INSERT INTO {self.snapshot}
-            SELECT {self.key_col}, {self.cols}, timestamp FROM {self.tmp_table} AS t
+            SELECT {self.key_col}, {self.cols_str}, timestamp FROM {self.source} AS t
         ''')
 
     def _clear_snapshot(self, conn):
         conn.execute(f'DELETE FROM {self.snapshot}')
 
 
-class MachineSplit(Timeseries):
-    def init_db(self, conn):
-        super().init_db(conn)
-        conn.execute('''
-        CREATE INDEX IF NOT EXISTS idx_machine_id
-            ON machine_split_snp (machine_id);
-        ''')
-
-    def _update_snapshot(self, conn):
-        conn.execute(f'''
-        DELETE FROM {self.snapshot}
-        WHERE machine_id IN (SELECT machine_id FROM {self.tmp_table})
-        AND id NOT IN (SELECT id FROM {self.tmp_table});
-        ''')
-
-        conn.execute(f'''
-        INSERT INTO {self.snapshot} ({self.key_col}, {self.cols})
-        SELECT t.{self.key_col}, {self.t_cols}
-        FROM {self.tmp_table} t
-        LEFT JOIN {self.snapshot} ON {self.snapshot}.machine_id = t.machine_id
-        WHERE {self.snapshot}.machine_id IS NULL;
-        ''');
-
-
 class OnlineTS:
-    def __init__(self, name: str, machine_tbl: str):
+    def __init__(self, name: str, machines_tbl: str):
         self.name = name
-        self.machine_tbl = machine_tbl
+        self.machines_tbl = machines_tbl
         self.timeseries = name + '_ts'
         self.snapshot = name + '_snp'
 
-    def init_db(self, conn):
-        conn.execute(f'''
+    def create(self, dbm):
+        dbm.execute(f'''
         CREATE TABLE IF NOT EXISTS {self.timeseries} (
             machine_id INTEGER, 
             online INTEGER, 
             timestamp INTEGER
         )
         ''')
-        conn.execute(f'''
+        dbm.execute(f'''
         CREATE TABLE IF NOT EXISTS {self.snapshot} (
             machine_id INTEGER, 
             online INTEGER, 
@@ -405,25 +367,25 @@ class OnlineTS:
         )
         ''')
 
-    def write_db(self, conn) -> int:
+    def update(self, dbm) -> int:
         # update online machines
-        rowcount = conn.execute(f"""
+        rowcount = dbm.execute(f"""
         INSERT INTO {self.timeseries} (machine_id, online, timestamp)
         SELECT t.machine_id, 1, t.timestamp FROM tmp_machines t
         WHERE (t.machine_id, 1) NOT IN (SELECT machine_id, online FROM {self.snapshot});
         """).rowcount
 
-        conn.execute(f"""
+        dbm.execute(f"""
         INSERT OR REPLACE INTO {self.snapshot} (machine_id, online, timestamp)
         SELECT t.machine_id, 1, timestamp FROM tmp_machines t
         WHERE (t.machine_id, 1) NOT IN (SELECT machine_id, online FROM {self.snapshot});
         """)
 
         # update offline machines
-        conn.execute(f"""
+        dbm.execute(f"""
         WITH machines AS (
             SELECT t.machine_id
-            FROM {self.machine_tbl} t
+            FROM {self.machines_tbl} t
             WHERE t.machine_id NOT IN
                   (SELECT machine_id FROM tmp_machines)
         ),
@@ -437,10 +399,10 @@ class OnlineTS:
         WHERE (machine_id, 0) NOT IN (SELECT machine_id, online from {self.snapshot});
         """)
 
-        conn.execute(f"""
+        dbm.execute(f"""
         WITH machines AS (
         SELECT t.machine_id
-        FROM {self.machine_tbl} t
+        FROM {self.machines_tbl} t
         WHERE t.machine_id NOT IN
               (SELECT machine_id FROM tmp_machines)
         ),
@@ -480,7 +442,7 @@ class NewOnlineTS(OnlineTS):
         conn.execute(f"""
         WITH machines AS (
             SELECT t.machine_id
-            FROM {self.machine_tbl} t
+            FROM {self.machines_tbl} t
             WHERE t.machine_id NOT IN
                   (SELECT machine_id FROM tmp_machines)
         ),
@@ -497,7 +459,7 @@ class NewOnlineTS(OnlineTS):
         conn.execute(f"""
         WITH machines AS (
         SELECT DISTINCT t.machine_id
-        FROM {self.machine_tbl} t
+        FROM {self.machines_tbl} t
         WHERE t.machine_id NOT IN
               (SELECT machine_id FROM tmp_machines)
         ),
@@ -512,35 +474,3 @@ class NewOnlineTS(OnlineTS):
         """)
 
         return rowcount
-
-
-def get_tables(conn) -> list:
-    res = conn.execute(f'''
-    SELECT
-        name
-    FROM
-           (SELECT * FROM sqlite_master UNION ALL
-            SELECT * FROM sqlite_temp_master)
-    WHERE
-        type ='table' AND
-        name NOT LIKE 'sqlite_%';
-    ''').fetchall()
-    return [x[0] for x in res]
-
-
-def get_tbl_info(name, conn) -> pd.DataFrame:
-    df = pd.DataFrame(conn.execute(f'PRAGMA table_info({name})').fetchall(),
-                      columns=['cid', 'name', 'type', 'notnull', 'dflt_value', 'pk'])
-    return df.set_index('cid')
-
-
-def get_tbl_timespan(name, conn) -> pd.Timedelta:
-    first = conn.execute(f'SELECT timestamp FROM {name} LIMIT 1').fetchall()[0][0]
-    last = conn.execute(f'SELECT timestamp FROM {name} ORDER BY ROWID DESC LIMIT 1').fetchall()[0][0]
-    return pd.to_timedelta((last - first) * 1e9)
-
-
-def table_to_df(name, conn) -> pd.DataFrame:
-    cols = get_tbl_info(name, conn)['name']
-    return pd.DataFrame(conn.execute(f'SELECT * FROM {name}').fetchall(),
-                        columns=cols)
