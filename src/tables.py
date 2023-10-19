@@ -266,8 +266,8 @@ class AverageStd(Timeseries):
         ''')
 
     def update(self, dbm):
-        ts = int(dbm.execute(f'SELECT timestamp FROM {self.source} LIMIT 1').fetchall()[0][0])
-        last_ts = int(dbm.execute(f'SELECT timestamp FROM {self.snapshot} LIMIT 1').fetchall()[0][0])
+        ts = dbm.get_last_ts(self.source)
+        last_ts = dbm.get_last_ts(self.snapshot)
 
         period = int(pd.to_timedelta(self.period).total_seconds())
         period_end = math.ceil(last_ts / period) * period

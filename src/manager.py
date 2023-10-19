@@ -107,6 +107,16 @@ class DbManager:
     def get_tbl_info(self, name) -> pd.DataFrame:
         return pd.read_sql(f'PRAGMA table_info({name})', self.conn, index_col='cid')
 
+    def get_last_ts(self, name) -> int:
+        output = self.execute(f'''
+            SELECT timestamp
+            FROM {name}
+            ORDER BY ROWID
+            DESC LIMIT 1
+        ''').fetchall()
+        return output[0][0] if output else 0
+
+
     def get_db_stats(self) -> pd.DataFrame:
         query = '''
         WITH t AS (

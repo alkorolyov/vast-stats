@@ -89,13 +89,7 @@ class VastDB:
         return total_rows
 
     def get_last_ts(self) -> int:
-        output = self.dbm.execute(f'''
-            SELECT timestamp
-            FROM {self.ts_idx}
-            ORDER BY ROWID
-            DESC LIMIT 1
-        ''').fetchall()
-        return output[0][0] if output else 0
+        return self.dbm.get_last_ts(self.ts_idx)
 
 
 

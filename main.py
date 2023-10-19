@@ -70,12 +70,12 @@ def main():
                 sleep(next_timeout(TIMEOUT))
                 continue
 
-            dt_last = dt.datetime.fromtimestamp(last_timestamp)
             dt_source = dt.datetime.fromtimestamp(machines.timestamp[0])
 
             # logging.info(f"[API] last_ts  : {dt_last}")
             # logging.info(f"[API] ts       : {dt_source}")
-            logging.info(f"[API] ts - now : {(dt.datetime.now().replace(microsecond=0) - dt_source)}")
+            logging.debug(f"[API] source_ts: [{dt_source.time()}]")
+            logging.debug(f"[API] ts - now : {(dt.datetime.now().replace(microsecond=0) - dt_source)}")
             # if dt_source < dt_last:
             #     logging.info(f"[API] last_ts-ts: {dt_last - dt_source}")
 
