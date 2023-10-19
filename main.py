@@ -1,6 +1,8 @@
 #!/usr/bin/python3
+import math
 import argparse
 import pandas as pd
+import datetime as dt
 import logging
 from logging.handlers import RotatingFileHandler
 
@@ -8,7 +10,7 @@ from time import sleep, time
 # from memory_profiler import profile
 
 from src.fetch import fetch_sources
-from src.utils import time_ms
+from src.utils import time_ms, next_timeout
 from src.vastdb import VastDB
 from src.const import TIMEOUT, LOG_FORMAT, MAX_LOGSIZE, LOG_COUNT
 
@@ -44,14 +46,16 @@ def main():
                         level=log_level,
                         datefmt='%d-%m-%Y %I:%M:%S')
 
+
+    # create db
     logging.info('[MAIN] Script started')
     vast = VastDB(db_path)
     vast.connect()
-    vast.init_tables()
     vast.create_tables()
     vast.close()
     logging.info('[MAIN] Tables created')
 
+    # main cycle
     while True:
         start = time()
 
@@ -61,9 +65,19 @@ def main():
 
         try:
             machines = fetch_sources(last_timestamp)
+
             if machines is None:
-                sleep(TIMEOUT)
+                sleep(next_timeout(TIMEOUT))
                 continue
+
+            dt_last = dt.datetime.fromtimestamp(last_timestamp)
+            dt_source = dt.datetime.fromtimestamp(machines.timestamp[0])
+
+            # logging.info(f"[API] last_ts  : {dt_last}")
+            # logging.info(f"[API] ts       : {dt_source}")
+            logging.info(f"[API] ts - now : {(dt.datetime.now().replace(microsecond=0) - dt_source)}")
+            # if dt_source < dt_last:
+            #     logging.info(f"[API] last_ts-ts: {dt_last - dt_source}")
 
         except Exception as e:
             logging.error(f"[API] General error {e}")
@@ -87,7 +101,8 @@ def main():
         logging.debug('=' * 50)
 
         # break
-        sleep(TIMEOUT)
+        sleep(next_timeout(TIMEOUT))
+        # sleep(TIMEOUT)
 
 
 if __name__ == '__main__':

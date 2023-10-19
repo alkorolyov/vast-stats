@@ -1,4 +1,6 @@
 import gc
+import math
+from time import time
 import numpy as np
 import pandas as pd
 from pandas.core.dtypes.common import is_integer_dtype, is_float_dtype, is_numeric_dtype, is_string_dtype
@@ -9,7 +11,16 @@ def time_ms(time_sec: float):
 
 
 def time_utc_now() -> pd.Timestamp:
-    return pd.Timestamp.utcnow().round(freq='S').tz_convert(None)
+    return pd.Timestamp.utcnow().round(freq='S')
+
+
+def ts_utc_now() -> int:
+    return int(time_utc_now().timestamp())
+
+
+def next_timeout(period=60) -> float:
+    t = time()
+    return math.ceil(t / period) * period - t
 
 
 def round_day(ts: pd.Series):

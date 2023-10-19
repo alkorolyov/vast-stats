@@ -8,7 +8,7 @@ import pandas as pd
 
 from src import const
 from src.manager import DbManager
-from src.new_tables import _Table, SingleTbl, MapTable, OnlineTS, Timeseries, AverageStd
+from src.tables import _Table, SingleTbl, MapTable, OnlineTS, Timeseries, AverageStd
 from src.utils import time_ms
 
 
@@ -59,17 +59,15 @@ class VastDB:
         hardware = Timeseries('hardware', const.HARDWARE_COLS)
         eod = Timeseries('eod', const.EOD_COLS)
         cost = Timeseries('cost', const.COST_COLS)
-        avg = AverageStd('avg', const.AVG_COLS, period='1 D')
+        # avg = AverageStd('avg', const.AVG_COLS, period='1 D')
+        avg = AverageStd('avg', const.AVG_COLS, period='5 min')
 
         self.tables += [
             online,
             hardware,
             cpu_ram, disk,
-            eod,
-            reliability,
-            cost,
-            rent,
-            avg
+            eod, reliability,
+            cost, rent, avg
         ]
 
     def init_tables(self):

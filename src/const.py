@@ -8,7 +8,7 @@ VAST_API_BASEURL = 'https://console.vast.ai'
 VAST_API_TIMEOUT = 25   # vast-api takes longer to get response
 
 RETRY_TIMEOUT = 20      # timeout between failed retries
-TIMEOUT = 58            # main cycle timeout
+TIMEOUT = 53            # main cycle timeout. `53` is average for '500.farm' source
 
 # Define logging options
 LOG_FORMAT = '[%(asctime)s] [%(levelname)s] %(message)s'
@@ -60,9 +60,7 @@ COST_COLS = ['dph_base', 'storage_cost', 'inet_up_cost',
 
 # Columns to keep
 ID_COLS = ['id', 'host_id', 'machine_id']
-
 SINGLE_COLS = ['timestamp', 'cpu_ram', 'disk_space', 'reliability', 'num_gpus_rented', 'rented']
-
 KEEP_COLS = (AVG_COLS +
              HARDWARE_COLS +
              EOD_COLS +

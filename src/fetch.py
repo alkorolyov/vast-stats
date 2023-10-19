@@ -1,16 +1,20 @@
 from __future__ import annotations
 
 import json
-import pandas as pd
 import requests
 import logging
+
+import pandas as pd
+import datetime as dt
 from urllib.parse import quote_plus
+
 from src import const
-from src.utils import time_utc_now
+from src.utils import time_utc_now, ts_utc_now
 from src.manager import DbManager
 from src.preprocess import preprocess, split_raw
-from time import sleep
+from time import sleep, time
 
+logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 def _apiurl(base_url: str, subpath: str, query_args: dict = None) -> str:
     """
@@ -63,8 +67,10 @@ def _get_sources():
 
 
 def _get_raw(url, timeout) -> pd.DataFrame | None:
+
     r = requests.get(url, timeout=timeout)
     r.raise_for_status()
+    time_now = pd.Timestamp.utcnow()
 
     try:
         r_dict = r.json()
@@ -80,7 +86,7 @@ def _get_raw(url, timeout) -> pd.DataFrame | None:
         logging.warning(f"No 'offers' in response from {url}")
         return None
 
-    _ts = r_dict.get('timestamp', time_utc_now())   # if time not present in raw, insert utc_now()
+    _ts = r_dict.get('timestamp', time_now)
     ts = int(pd.to_datetime(_ts).timestamp())
 
     raw = pd.DataFrame(r_dict['offers'])
@@ -118,6 +124,13 @@ def fetch_single_source(source, max_tries=3) -> pd.DataFrame | None:
 
 def fetch_sources(last_ts: int = 0) -> pd.DataFrame | None:
     """
+    default source: 500.farm, fetch only 500.farm
+    when ts == ts_db: wait 1x timeout, repeat
+    when ts == ts_db and now - ts > 1x timeout: shift to vast source
+
+    source: vast, fetch botch sources
+    when now - 500farm_ts < 1x timeout: wait 1x timeout, shift back to 500.farm
+
     Fetch machine data from the sources.
 
     @param last_ts: last recorded timestamp in the database
@@ -126,12 +139,23 @@ def fetch_sources(last_ts: int = 0) -> pd.DataFrame | None:
     sources = _get_sources()
     for source in sources:
         machines = fetch_single_source(source)
-        if machines is not None:
-            # if timestamp is too old - switch to other source
-            ts = machines.timestamp.iloc[0]
-            if ts <= last_ts:
-                logging.warning(f"[API] Response from '{source['name']}' is too old.")
-                continue
+
+        if machines is None:
+            continue
+
+        ts = machines.timestamp.iloc[0]
+
+        # timestamp is too old - switch to next source
+        if time() - ts > 2 * const.TIMEOUT:
+            logging.warning(f"[API] '{source['name']}' response is old {time() - ts:.1f}s")
+            continue
+
+        # if timestamp is already recorded return None
+        if ts <= last_ts:
+            logging.warning(f"[API] '{source['name']}' response is already recorded")
+            return None
+
         return machines
+
     logging.warning(f'[API] Failed to fetch data from any source')
     return None
