@@ -59,8 +59,7 @@ class VastDB:
         hardware = Timeseries('hardware', const.HARDWARE_COLS)
         eod = Timeseries('eod', const.EOD_COLS)
         cost = Timeseries('cost', const.COST_COLS)
-        # avg = AverageStd('avg', const.AVG_COLS, period='1 D')
-        avg = AverageStd('avg', const.AVG_COLS, period='5 min')
+        avg = AverageStd('avg', const.AVG_COLS, period='1 D')
 
         self.tables += [
             online,
