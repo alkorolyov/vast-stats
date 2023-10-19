@@ -1,5 +1,6 @@
 import logging
 import math
+from typing import List
 
 import pandas as pd
 
@@ -27,7 +28,7 @@ class _Table:
     create(), update().
     """
     name: str                   # table name
-    cols: list[str]             # list of column names
+    cols: List[str]             # list of column names
     source: str                 # name of the temporary source table
 
     def __init__(self, name: str, cols: list = None, source: str = None):
