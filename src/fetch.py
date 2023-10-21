@@ -109,13 +109,13 @@ def fetch_single_source(source, max_tries=3) -> pd.DataFrame | None:
                 machines = raw
             return machines
         except requests.exceptions.HTTPError as e:
-            logging.warning(f"[API] failed to fetch data from '{src_name}': {e}")
-            logging.debug(f'[API] attempt #{i}, retrying ...')
+            logging.warning(f"[API] Failed to fetch data from '{src_name}': {e}")
+            logging.debug(f'[API] Attempt #{i}, retrying ...')
             sleep(const.RETRY_TIMEOUT)
 
         except requests.exceptions.Timeout as e:
             logging.warning(f"[API] Connection timeout to '{src_name}': {e}")
-            logging.debug(f'[API] attempt #{i}, retrying ...')
+            logging.debug(f'[API] Attempt #{i}, retrying ...')
             sleep(const.RETRY_TIMEOUT)
 
     logging.warning(f"[API] Max attempts '{max_tries}' reached for '{src_name}'")
@@ -147,12 +147,12 @@ def fetch_sources(last_ts: int = 0) -> pd.DataFrame | None:
 
         # timestamp is too old - switch to next source
         if time() - ts > 2 * const.TIMEOUT:
-            logging.warning(f"[API] '{source['name']}' response is old {time() - ts:.1f}s")
+            logging.warning(f"[API] '{source.name}' Response is too old {time() - ts:.1f}s")
             continue
 
         # if timestamp is already recorded return None
         if ts <= last_ts:
-            logging.warning(f"[API] '{source['name']}' response is already recorded")
+            logging.warning(f"[API] '{source.name}' Response is already recorded")
             return None
 
         return machines

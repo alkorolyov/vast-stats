@@ -274,22 +274,22 @@ class AverageStd(Timeseries):
 
         rowcount = 0
 
-        # check period logic
+        # check if end of period
         if ts >= period_end:
             rowcount = self._write_mean_std(dbm, period_end)
             self._clear_snapshot(dbm)
-            logging.debug(f"[{self.name.upper()}] Average calculated over '{self.period}'")
+            logging.info(f"[{self.name.upper()}] Average calculated over '{self.period}'")
 
         self._write_snapshot(dbm)
 
         return rowcount
 
     def _write_mean_std(self, dbm, period_end: int):
-        dbm.conn.create_function('sqrt', 1, math.sqrt)
+        dbm.conn.create_function('SQRT', 1, math.sqrt)
 
         avg_std_calc = f', \n\r'.join([
             f'ROUND(AVG({c})),\n\r'
-            f'ROUND(sqrt(AVG({c} * {c}) - AVG({c}) * AVG({c})), 2)'
+            f'ROUND(SQRT(AVG({c} * {c}) - AVG({c}) * AVG({c})), 2)'
             for c in self.cols
         ])
 
@@ -311,38 +311,14 @@ class AverageStd(Timeseries):
         rowcount = dbm.execute(sql_expression).rowcount
         return rowcount
 
-        # # calculate mean, std
-        # df = table_to_df(self.snapshot, dbm)
-        # cols = self.cols_list + [self.key_col]
-        # mean_df = df[cols].groupby(self.key_col).mean()
-        # std_df = df[cols].groupby(self.key_col).std()
-        #
-        # for col in std_df:
-        #     mask = std_df[col].isna()
-        #     if mask.any():
-        #         print(df.loc[std_df[mask].index])
-        #         print(mean_df[mask])
-        #         print(std_df[mask])
-        #
-        # df_ = pd.DataFrame(index=mean_df.index)
-        # for col in self.cols_list:
-        #     df_[col + '_avg'] = mean_df[col]
-        #     df_[col + '_std'] = std_df[col]
-        # df_['timestamp'] = df.timestamp.iloc[-1]
-        #
-        #
-        #
-        # # write to sql
-        # df_.to_sql(self.timeseries, dbm, if_exists='append')
-
-    def _write_snapshot(self, conn):
-        conn.execute(f'''        
+    def _write_snapshot(self, dbm):
+        dbm.execute(f'''        
             INSERT INTO {self.snapshot}
             SELECT {self.key_col}, {self.cols_str}, timestamp FROM {self.source} AS t
         ''')
 
-    def _clear_snapshot(self, conn):
-        conn.execute(f'DELETE FROM {self.snapshot}')
+    def _clear_snapshot(self, dbm):
+        dbm.execute(f'DELETE FROM {self.snapshot}')
 
 
 class OnlineTS:
@@ -422,9 +398,9 @@ class OnlineTS:
 
 
 class NewOnlineTS(OnlineTS):
-    def write_db(self, conn) -> int:
+    def write_db(self, dbm) -> int:
         # update online machines
-        rowcount = conn.execute(f"""
+        rowcount = dbm.execute(f"""
         INSERT INTO {self.timeseries} (machine_id, online, timestamp)
         SELECT t.machine_id, 1, t.timestamp
         FROM tmp_machines t
@@ -432,7 +408,7 @@ class NewOnlineTS(OnlineTS):
         WHERE s.machine_id IS NULL;
         """).rowcount
 
-        conn.execute(f"""
+        dbm.execute(f"""
         INSERT OR REPLACE INTO {self.snapshot} (machine_id, online, timestamp)
         SELECT t.machine_id, 1, t.timestamp
         FROM tmp_machines t
@@ -441,7 +417,7 @@ class NewOnlineTS(OnlineTS):
         """)
 
         # update offline machines
-        conn.execute(f"""
+        dbm.execute(f"""
         WITH machines AS (
             SELECT t.machine_id
             FROM {self.machines_tbl} t
@@ -458,7 +434,7 @@ class NewOnlineTS(OnlineTS):
         WHERE (machine_id, 0) NOT IN (SELECT machine_id, online from {self.snapshot});
         """)
 
-        conn.execute(f"""
+        dbm.execute(f"""
         WITH machines AS (
         SELECT DISTINCT t.machine_id
         FROM {self.machines_tbl} t

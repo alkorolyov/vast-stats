@@ -32,10 +32,10 @@ STR_COLS = ['cpu_name', 'cuda_max_good', 'disk_name', 'driver_version',
 
 FLOAT_COLS = []
 
-DROP_COLS = ['credit_balance', 'credit_discount', 'location', 'geolocation', 'bundle_id',
-             'discount_rate', 'discounted_dph_total', 'discounted_hourly',
-             'dlperf_per_dphtotal', 'duration', 'flops_per_dphtotal', 'start_date',
-             'verified', 'host_run_time', 'cpu_cores_effective', 'gpu_frac', 'chunks']
+# DROP_COLS = ['credit_balance', 'credit_discount', 'location', 'geolocation', 'bundle_id',
+#              'discount_rate', 'discounted_dph_total', 'discounted_hourly',
+#              'dlperf_per_dphtotal', 'duration', 'flops_per_dphtotal', 'start_date',
+#              'verified', 'host_run_time', 'cpu_cores_effective', 'gpu_frac', 'chunks']
 
 
 # Group columns
@@ -61,6 +61,7 @@ COST_COLS = ['dph_base', 'storage_cost', 'inet_up_cost',
 # Columns to keep
 ID_COLS = ['id', 'host_id', 'machine_id']
 SINGLE_COLS = ['timestamp', 'cpu_ram', 'disk_space', 'reliability', 'num_gpus_rented', 'rented']
+
 KEEP_COLS = (AVG_COLS +
              HARDWARE_COLS +
              EOD_COLS +
