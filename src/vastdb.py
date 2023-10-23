@@ -16,6 +16,7 @@ class VastDB:
     """ Class responsible for the Vast database structure """
     dbm: DbManager
     tables: list[_Table]
+    avg_updated: bool = False
 
     def __init__(self, db_path: str):
         self.dbm = DbManager(db_path)
@@ -31,6 +32,9 @@ class VastDB:
 
     def commit(self):
         self.dbm.commit()
+
+    def vacuum(self):
+        self.dbm.vacuum()
 
     def create_tmp_tables(self, machines):
         try:
@@ -59,7 +63,7 @@ class VastDB:
         hardware = Timeseries('hardware', HARDWARE_COLS)
         eod = Timeseries('eod', EOD_COLS)
         cost = Timeseries('cost', COST_COLS)
-        avg = AverageStd('avg', AVG_COLS, period='1 day') #TODO change for prod
+        avg = AverageStd('avg', AVG_COLS, period='1 day')   # TODO change to 1 day for prod
 
         self.tables += [
             online,
@@ -80,9 +84,12 @@ class VastDB:
 
     def update_tables(self) -> int:
         total_rows = 0
+        self.avg_updated = False
         for tbl in self.tables:
             start = time()
             rows = tbl.update(self.dbm)
+            if isinstance(tbl, AverageStd) and rows > 0:
+                self.avg_updated = True
             total_rows += rows
             logging.debug(f'[{tbl.name.upper()}] {rows} rows updated in {time_ms(time() - start)}ms')
         return total_rows

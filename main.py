@@ -60,20 +60,18 @@ def main():
         start = time()
 
         vast.connect()
-        last_timestamp = vast.get_last_ts()
+        last_ts = vast.get_last_ts()
         vast.close()
+        logging.debug(f"[DB] last timestamp {dt.datetime.fromtimestamp(last_ts)}")
 
         try:
-            machines = fetch_sources(last_timestamp)
+            machines = fetch_sources(last_ts)
 
             if machines is None:
                 sleep(next_timeout(TIMEOUT))
                 continue
 
             dt_source = dt.datetime.fromtimestamp(machines.timestamp[0])
-
-            # logging.info(f"[API] last_ts  : {dt_last}")
-            # logging.info(f"[API] ts       : {dt_source}")
             logging.debug(f"[API] source_ts: [{dt_source.time()}]")
             logging.debug(f"[API] ts - now : {(dt.datetime.now().replace(microsecond=0) - dt_source)}")
             # if dt_source < dt_last:
@@ -83,21 +81,26 @@ def main():
             logging.error(f"[API] General error {e}")
             raise
 
-        start_total_db = time()
-
         logging.debug(f'[API] Request completed in {time() - start:.2f}s')
 
-        start = time()
+        start_total_db = time()
+
         vast.connect()
+
+        start = time()
         vast.create_tmp_tables(machines)
         logging.debug(f'[TMP_TABLES] created in {time_ms(time() - start)}ms')
 
         rows = vast.update_tables()
-
         vast.commit()
-        vast.close()
-
         logging.info(f'[TOTAL_DB] {rows} rows updated in {time_ms(time() - start_total_db)}ms')
+
+        if vast.avg_updated:
+            start = time()
+            vast.vacuum()
+            logging.info(f'[TOTAL_DB] Vacuum in {time_ms(time() - start)}ms')
+
+        vast.close()
         logging.debug('=' * 50)
 
         # break

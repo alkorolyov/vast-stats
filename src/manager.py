@@ -18,7 +18,7 @@ class DbManager:
     def connect(self):
         try:
             self.conn = sqlite3.connect(self.db_path) if self.db_path else sqlite3.connect(':memory:')
-            logging.debug(f"Connected to the database '{self.db_path}'")
+            # logging.debug(f"Connected to the database '{self.db_path}'")
         except sqlite3.Error as e:
             logging.error(f"Error connecting to the database '{self.db_path}': {e}")
             raise
@@ -26,7 +26,7 @@ class DbManager:
     def close(self):
         if self.conn:
             self.conn.close()
-            logging.debug(f"Closed connection to the database '{self.db_path}'.")
+            # logging.debug(f"Closed connection to the database '{self.db_path}'.")
         else:
             logging.debug(f"Close connection to the database: no active connection")
 
