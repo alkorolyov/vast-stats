@@ -284,7 +284,7 @@ class AverageStd(Timeseries):
             self._clear_snapshot(dbm)
             # dbm.commit()
             # dbm.vacuum()
-            logging.info(f"[{self.name.upper()}] Average calculated over '{self.period}' {time_ms(time() - start)}")
+            logging.info(f"[{self.name.upper()}] Average calculated over '{self.period}': {time_ms(time() - start)}ms")
 
         self._write_snapshot(dbm)
 

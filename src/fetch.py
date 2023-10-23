@@ -147,12 +147,12 @@ def fetch_sources(last_ts: int = 0) -> pd.DataFrame | None:
 
         # timestamp is too old - switch to next source
         if time() - ts > 2 * const.TIMEOUT:
-            logging.warning(f"[API] '{source.name}' Response is too old {time() - ts:.1f}s")
+            logging.warning(f"[API] '{source['name']}' Response is too old {time() - ts:.1f}s")
             continue
 
         # if timestamp is already recorded return None
         if ts <= last_ts:
-            logging.warning(f"[API] '{source.name}' Response is already recorded")
+            logging.warning(f"[API] '{source['name']}' Response is already recorded")
             return None
 
         return machines
