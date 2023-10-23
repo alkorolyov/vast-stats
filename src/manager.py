@@ -37,7 +37,7 @@ class DbManager:
             logging.error(f"Error during VACUUM database: {e}")
             raise
 
-def execute(self, sql_query):
+    def execute(self, sql_query):
         try:
             return self.conn.execute(sql_query)
         except sqlite3.Error as e:
