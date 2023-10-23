@@ -1,11 +1,14 @@
 import logging
 import math
+from time import time
 from typing import List
+
 
 import pandas as pd
 
-from src.manager import DbManager
 from src import const
+from src.manager import DbManager
+from src.utils import time_ms
 
 
 def _get_dtype(col_name: str) -> str:
@@ -269,16 +272,18 @@ class AverageStd(Timeseries):
         ts = dbm.get_last_ts(self.source)
         last_ts = dbm.get_last_ts(self.snapshot)
 
-        period_sec = int(pd.to_timedelta(self.period).total_seconds())
-        period_end = math.ceil(last_ts / period_sec) * period_sec
+        period = int(pd.to_timedelta(self.period).total_seconds())
+        period_end = math.ceil(last_ts / period) * period
 
         rowcount = 0
 
         # check if end of period
-        if ts >= period_end:
+        if ts > period_end:
+            start = time()
             rowcount = self._write_mean_std(dbm, period_end)
             self._clear_snapshot(dbm)
-            logging.info(f"[{self.name.upper()}] Average calculated over '{self.period}'")
+            dbm.vacuum()
+            logging.info(f"[{self.name.upper()}] Average calculated over '{self.period}' {time_ms(time() - start)}")
 
         self._write_snapshot(dbm)
 

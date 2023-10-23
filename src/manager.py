@@ -30,7 +30,14 @@ class DbManager:
         else:
             logging.debug(f"Close connection to the database: no active connection")
 
-    def execute(self, sql_query):
+    def vacuum(self):
+        try:
+            return self.conn.execute('VACUUM')
+        except sqlite3.Error as e:
+            logging.error(f"Error during VACUUM database: {e}")
+            raise
+
+def execute(self, sql_query):
         try:
             return self.conn.execute(sql_query)
         except sqlite3.Error as e:
@@ -115,7 +122,6 @@ class DbManager:
             DESC LIMIT 1
         ''').fetchall()
         return output[0][0] if output else 0
-
 
     def get_db_stats(self) -> pd.DataFrame:
         query = '''
