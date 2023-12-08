@@ -182,11 +182,13 @@ def _filter_sum_gpus(machines, offers):
 
 
 def preprocess(raw: pd.DataFrame):
+    _rename_cols(raw)
+
     # raw['isp'] = _get_isp(raw)
     raw['country'] = _get_country(raw)
+    raw.verification = raw.verification.map(VERIFIED_ENUM)
 
     _fillna(raw)
-    _rename_cols(raw)
 
     # Hardware
     raw.bw_nvlink = raw.bw_nvlink.round(-1)
@@ -202,9 +204,7 @@ def preprocess(raw: pd.DataFrame):
     # raw.score = raw.score.round()
 
     # End Of Day data
-    raw.verification = raw.verification.map(VERIFIED_ENUM)
     raw.end_date = round_day(raw.end_date)
-
 
     # Reliability * 1e4
     raw.reliability = raw.reliability * 1e4
