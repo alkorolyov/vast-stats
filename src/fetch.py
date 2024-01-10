@@ -109,7 +109,12 @@ def fetch_single_source(source, max_tries=3) -> pd.DataFrame | None:
                 machines = raw
             return machines
         except requests.exceptions.HTTPError as e:
-            logging.warning(f"[API] Failed to fetch data from '{src_name}': {e}")
+            logging.warning(f"[API] HTTPError fetching from '{src_name}': {e}")
+            logging.debug(f'[API] Attempt #{i}, retrying ...')
+            sleep(const.RETRY_TIMEOUT)
+
+        except requests.exceptions.ConnectionError as e:
+            logging.warning(f"[API] ConnectionError fetching from '{src_name}': {e}")
             logging.debug(f'[API] Attempt #{i}, retrying ...')
             sleep(const.RETRY_TIMEOUT)
 
