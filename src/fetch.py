@@ -102,12 +102,20 @@ def fetch_single_source(source, max_tries=3) -> pd.DataFrame | None:
     for i in range(1, max_tries + 1):
         try:
             raw = _get_raw(url, timeout)
+            assert raw is not None
+
             preprocess(raw)
             if to_split:
                 machines, _ = split_raw(raw)
             else:
                 machines = raw
             return machines
+
+        except AssertionError as e:
+            logging.warning(f"[API] Empty 'raw' fetching from '{src_name}': {e}")
+            logging.debug(f'[API] Attempt #{i}, retrying ...')
+            sleep(const.RETRY_TIMEOUT)
+
         except requests.exceptions.HTTPError as e:
             logging.warning(f"[API] HTTPError fetching from '{src_name}': {e}")
             logging.debug(f'[API] Attempt #{i}, retrying ...')
