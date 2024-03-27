@@ -73,7 +73,7 @@ def main():
                 sleep(next_timeout(TIMEOUT))
                 continue
 
-            dt_source = dt.datetime.fromtimestamp(machines.timestamp[0])
+            dt_source = dt.datetime.fromtimestamp(machines.timestamp.iloc[0])
             logging.debug(f"[API] source_ts: [{dt_source.time()}]")
             logging.debug(f"[API] ts - now : {(dt.datetime.now().replace(microsecond=0) - dt_source)}")
             # if dt_source < dt_last:
@@ -82,7 +82,7 @@ def main():
         except Exception as e:
             # msg = f"[API] General error {e}"
             msg = '\n'.join(traceback.format_exception(type(e), e, e.__traceback__))
-            logs = '\n'.join(read_last_n_lines(log_path, 10))
+            logs = read_last_n_lines(log_path, 10)
 
             logging.error(msg)
             send_error_email('VAST-STATS error', f"Error message:\n{msg}\nLogs:\n{logs}")

@@ -238,7 +238,7 @@ def read_last_n_lines(filename, n):
     try:
         with open(filename, 'r') as file:
             lines = file.readlines()
-            return lines[-n:]
+            return '\n'.join(lines[-n:])
     except Exception as e:
         logging.warning(f"Error reading file: {e}")
         return None
