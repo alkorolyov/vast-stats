@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 import pandas as pd
 from pandas.core.dtypes.common import is_integer_dtype, is_float_dtype, is_string_dtype
@@ -85,6 +87,7 @@ def _rename_cols(raw):
         raw.rename(columns={'rentable': 'rented'}, inplace=True)
 
     if 'reliability2' in raw:
+        raw.drop(columns=['reliability'], inplace=True, errors='ignore')
         raw.rename(columns={'reliability2': 'reliability'}, inplace=True)
 
 
