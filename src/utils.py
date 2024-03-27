@@ -1,4 +1,5 @@
 import gc
+import logging
 import math
 from time import time
 import numpy as np
@@ -239,5 +240,5 @@ def read_last_n_lines(filename, n):
             lines = file.readlines()
             return lines[-n:]
     except Exception as e:
-        print(f"Error reading file: {e}")
+        logging.warning(f"Error reading file: {e}")
         return None

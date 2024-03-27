@@ -4,6 +4,7 @@ import argparse
 import pandas as pd
 import datetime as dt
 import logging
+import traceback
 from logging.handlers import RotatingFileHandler
 
 from time import sleep, time
@@ -79,11 +80,12 @@ def main():
             #     logging.info(f"[API] last_ts-ts: {dt_last - dt_source}")
 
         except Exception as e:
-            msg = f"[API] General error {e}"
-            logs = read_last_n_lines(log_path, 10)
+            # msg = f"[API] General error {e}"
+            msg = '\n'.join(traceback.format_exception(type(e), e, e.__traceback__))
+            logs = '\n'.join(read_last_n_lines(log_path, 10))
 
             logging.error(msg)
-            send_error_email('VAST-STATS error', f"{msg} \n {logs}")
+            send_error_email('VAST-STATS error', f"Error message:\n{msg}\nLogs:\n{logs}")
             raise
 
         logging.debug(f'[API] Request completed in {time() - start:.2f}s')
