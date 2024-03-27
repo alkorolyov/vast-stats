@@ -232,3 +232,12 @@ def reduce_mem_usage(df, subset=None, int_cast=True, obj_to_category=False, verb
 
     return df
 
+
+def read_last_n_lines(filename, n):
+    try:
+        with open(filename, 'r') as file:
+            lines = file.readlines()
+            return lines[-n:]
+    except Exception as e:
+        print(f"Error reading file: {e}")
+        return None

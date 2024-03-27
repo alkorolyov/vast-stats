@@ -10,9 +10,10 @@ from time import sleep, time
 # from memory_profiler import profile
 
 from src.fetch import fetch_sources
-from src.utils import time_ms, next_timeout
+from src.utils import time_ms, next_timeout, read_last_n_lines
 from src.vastdb import VastDB
 from src.const import TIMEOUT, LOG_FORMAT, MAX_LOGSIZE, LOG_COUNT
+from src.email import send_error_email
 
 pd.set_option('display.max_rows', 500)
 pd.set_option('display.max_columns', 50)
@@ -78,7 +79,11 @@ def main():
             #     logging.info(f"[API] last_ts-ts: {dt_last - dt_source}")
 
         except Exception as e:
-            logging.error(f"[API] General error {e}")
+            msg = f"[API] General error {e}"
+            logs = read_last_n_lines(log_path, 10)
+
+            logging.error(msg)
+            send_error_email('VAST-STATS error', f"{msg} \n {logs}")
             raise
 
         logging.debug(f'[API] Request completed in {time() - start:.2f}s')
