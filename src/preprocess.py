@@ -57,9 +57,9 @@ def _fillna(raw: pd.DataFrame):
     for col in raw.columns:
         dtype = raw[col].dtype
         if is_integer_dtype(dtype) or is_float_dtype(dtype):
-            raw[col].fillna(0, inplace=True)
+            raw.fillna({col: 0}, inplace=True)
         elif is_string_dtype(dtype):
-            raw[col].fillna('', inplace=True)
+            raw.fillna({col: ''}, inplace=True)
 
 
 def _conv_to_int(raw: pd.DataFrame, cols: list):
