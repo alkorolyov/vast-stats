@@ -54,14 +54,14 @@ def _get_sources():
         'to_split': False,
     })
 
-    query = {"external": {"eq": False},  "disable_bundling": {"eq": True}, "type": "on-demand"}
-    vast_api_url = _apiurl(const.VAST_API_BASEURL, '/bundles', {'q': query})
-    sources.append({
-        'name': 'vast.ai',
-        'url': vast_api_url,
-        'timeout': const.VAST_API_TIMEOUT,
-        'to_split': True,
-    })
+    # query = {"external": {"eq": False},  "disable_bundling": {"eq": True}, "type": "on-demand"}
+    # vast_api_url = _apiurl(const.VAST_API_BASEURL, '/bundles', {'q': query})
+    # sources.append({
+    #     'name': 'vast.ai',
+    #     'url': vast_api_url,
+    #     'timeout': const.VAST_API_TIMEOUT,
+    #     'to_split': True,
+    # })
 
     return sources
 
@@ -159,9 +159,9 @@ def fetch_sources(last_ts: int = 0) -> pd.DataFrame | None:
         ts = machines.timestamp.iloc[0]
 
         # timestamp is too old - switch to next source
-        if time() - ts > 2 * const.TIMEOUT:
-            logging.warning(f"[API] '{source['name']}' Response is too old {time() - ts:.1f}s")
-            continue
+        # if time() - ts > 2 * const.TIMEOUT:
+        #     logging.warning(f"[API] '{source['name']}' Response is too old {time() - ts:.1f}s")
+        #     continue
 
         # if timestamp is already recorded return None
         if ts <= last_ts:
