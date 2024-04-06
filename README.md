@@ -10,9 +10,15 @@ git clone https://github.com/alkorolyov/vast-stats; cd vast-stats; sudo bash ./i
 
 # download from gcloud
 
-# gcloud compute scp {vm_instance_name}:/var/lib/vast-stats/vast.db vast.db
+[//]: # (gcloud compute scp {vm_instance_name}:/var/lib/vast-stats/vast.db vast.db)
 
 cd C:\Users\ergot\DataspellProjects\vast-stats\data
 gcloud compute scp free-ubn20:/var/lib/vast-stats/vast.db vast.db
 
 gcloud compute scp free-ubn20:/home/ergot/vast-stats/vast.db vast_gc.db
+
+# free google cloud vm
+* Machine type: e2-micro
+* Zone: us-central1-a
+* Networking: Standard Tier
+* Disk: 30GB Standard persistent disk

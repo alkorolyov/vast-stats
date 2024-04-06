@@ -80,7 +80,6 @@ def main():
             #     logging.info(f"[API] last_ts-ts: {dt_last - dt_source}")
 
         except Exception as e:
-            # msg = f"[API] General error {e}"
             msg = '\n'.join(traceback.format_exception(type(e), e, e.__traceback__))
             logs = read_last_n_lines(log_path, 10)
 
