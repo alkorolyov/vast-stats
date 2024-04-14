@@ -80,6 +80,7 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
             logging.debug(f"compression ratio: {len(compressed_data) / len(json_data) * 100:.1f}%")
 
             self.send_compressed_data(compressed_data)
+            logging.debug(f"data size: {len(compressed_data)} bytes")
 
         except sqlite3.DatabaseError as e:
             self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR, f'SQLite DatabaseError {query_params}', str(e))

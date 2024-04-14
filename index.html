@@ -35,6 +35,7 @@
     <div id="plot-container"></div>
 
     <script>
+
         const plotForm = document.getElementById("plot-form");
         const plotContainer = document.getElementById("plot-container");
         let plotInstance = null;
@@ -46,6 +47,9 @@
             const fromDate = document.getElementById("from-date").value;
             const toDate = document.getElementById("to-date").value;
             console.log(machineId, fromDate, toDate);
+
+            const windowWidth = window.innerWidth * window.devicePixelRatio;
+            const windowHeight = window.innerHeight * window.devicePixelRatio;
 
             // Construct URL
             let url = `/reliability?machine_id=${machineId}`;
@@ -69,19 +73,16 @@
 
                     const plotData = [xValues, yValues];
 
-                    // Update or create plot
+
                     if (plotInstance) {
+                        // update existing plot with new data
                         plotInstance.setData(plotData);
                         plotInstance.opts.title = `machine_id: ${machineId}`;
 
                         // Update plot size based on window dimensions and scaling factor
-                        const windowWidth = window.innerWidth * window.devicePixelRatio;
-                        const windowHeight = window.innerHeight * window.devicePixelRatio;
                         plotInstance.setSize({ width: windowWidth * 0.8, height: windowHeight * 0.6 });
                     } else {
-                        // Example: Render plot with uPlot
-                        const windowWidth = window.innerWidth * window.devicePixelRatio;
-                        const windowHeight = window.innerHeight * window.devicePixelRatio;
+                        // Create and render plot with uPlot
                         const opts = {
                             width: windowWidth * 0.8,
                             height: windowHeight * 0.6,
