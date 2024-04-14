@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import sqlite3
+import json
 
 import pandas as pd
 
@@ -114,7 +115,6 @@ class DbManager:
     def get_tbl_info(self, name) -> pd.DataFrame:
         return pd.read_sql(f'PRAGMA table_info({name})', self.conn, index_col='cid')
 
-
     def get_last_ts(self, name) -> int:
         output = self.execute(f'''
             SELECT timestamp
@@ -180,3 +180,18 @@ class DbManager:
         placeholder = ', '.join(['?'] * len(df.columns))
         self.conn.execute(f'CREATE TEMP TABLE IF NOT EXISTS {tbl_name} ({cols_str});')
         self.conn.executemany(f"INSERT INTO {tbl_name} VALUES ({placeholder})", df.values.tolist())
+
+    def query_to_json(self, query):
+        cursor = self.conn.cursor()
+        cursor.execute(query)
+        rows = cursor.fetchall()
+
+        # Convert rows to a list of dictionaries
+        result = []
+        for row in rows:
+            result.append(dict(zip([column[0] for column in cursor.description], row)))
+
+        # Serialize the result to JSON
+        json_data = json.dumps(result)
+        cursor.close()
+        return json_data

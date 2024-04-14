@@ -10,10 +10,10 @@ from logging.handlers import RotatingFileHandler
 from time import sleep, time
 # from memory_profiler import profile
 
+from src import const
 from src.fetch import fetch_sources
 from src.utils import time_ms, next_timeout, read_last_n_lines
 from src.vastdb import VastDB
-from src.const import TIMEOUT, LOG_FORMAT, MAX_LOGSIZE, LOG_COUNT
 from src.email import send_error_email
 
 pd.set_option('display.max_rows', 500)
@@ -38,12 +38,12 @@ def main():
     log_handler = None
     if not verbose:
         rotating = RotatingFileHandler(log_path,
-                                       maxBytes=MAX_LOGSIZE,
-                                       backupCount=LOG_COUNT)
+                                       maxBytes=const.MAX_LOGSIZE,
+                                       backupCount=const.LOG_COUNT)
         log_handler = [rotating]
 
     log_level = logging.DEBUG if debug else logging.INFO
-    logging.basicConfig(format=LOG_FORMAT,
+    logging.basicConfig(format=const.LOG_FORMAT,
                         handlers=log_handler,
                         level=log_level,
                         datefmt='%d-%m-%Y %I:%M:%S')
@@ -70,7 +70,7 @@ def main():
             machines = fetch_sources(last_ts)
 
             if machines is None:
-                sleep(next_timeout(TIMEOUT))
+                sleep(next_timeout(const.TIMEOUT))
                 continue
 
             dt_source = dt.datetime.fromtimestamp(machines.timestamp.iloc[0])
@@ -110,8 +110,7 @@ def main():
         logging.debug('=' * 50)
 
         # break
-        sleep(next_timeout(TIMEOUT))
-        # sleep(TIMEOUT)
+        sleep(next_timeout(const.TIMEOUT))
 
 
 if __name__ == '__main__':

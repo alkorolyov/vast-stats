@@ -10,6 +10,8 @@ VAST_API_TIMEOUT = 25   # vast-api takes longer to get response
 RETRY_TIMEOUT = 20      # timeout between failed retries
 TIMEOUT = 53            # main cycle timeout. `53` is average for '500.farm' source
 
+PORT = 8080             # port number for web server
+
 # Define logging options
 LOG_FORMAT = '[%(asctime)s] [%(levelname)s] %(message)s'
 MAX_LOGSIZE = 1024 * 1024  # 1Mb

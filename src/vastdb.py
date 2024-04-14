@@ -4,8 +4,6 @@ import sqlite3
 import logging
 from time import time
 
-import pandas as pd
-
 from src.const import HARDWARE_COLS, COST_COLS, EOD_COLS, AVG_COLS
 from src.manager import DbManager
 from src.tables import _Table, SingleTbl, MapTable, OnlineTS, Timeseries, AverageStd

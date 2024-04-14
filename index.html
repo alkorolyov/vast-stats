@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>uPlot Example</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/css/bootstrap.min.css" integrity="sha384-0evHe/X+R7YkIZDRvuzKMRqM+OrBnVFBL6DOitfPri4tjfHxaWutUpFmBp4vmVor" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/js/bootstrap.bundle.min.js" integrity="sha384-pprn3073KE6tl6bjs2QrFaJGz5/SUsLqktiwsUTF55Jfv3qYSDhgCecCxMW52nD2" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/uplot@1.6.30/dist/uPlot.iife.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/uplot@1.6.30/dist/uPlot.min.css">
+</head>
+<body>
+    <div class="container">
+        <form id="plot-form" class="bg-light p-4 rounded shadow">
+            <div class="row mb-3">
+                <label for="machine-id" class="col-auto col-form-label">Machine ID:</label>
+                <div class="col-auto">
+                    <input type="text" id="machine-id" name="machine_id" class="form-control">
+                </div>
+                <label for="from-date" class="col-auto col-form-label">From:</label>
+                <div class="col-auto">
+                    <input type="text" id="from-date" name="from_date" class="col-auto form-control">
+                </div>
+                <label for="to-date" class="col-auto col-form-label">To:</label>
+                <div class="col-auto">
+                    <input type="text" id="to-date" name="to_date" class="form-control">
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary">Plot</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <div id="plot-container"></div>
+
+    <script>
+        const plotForm = document.getElementById("plot-form");
+        const plotContainer = document.getElementById("plot-container");
+        let plotInstance = null;
+
+        // Function to fetch data and update plot
+        function fetchDataAndPlot() {
+            // Get form values
+            const machineId = document.getElementById("machine-id").value;
+            const fromDate = document.getElementById("from-date").value;
+            const toDate = document.getElementById("to-date").value;
+            console.log(machineId, fromDate, toDate);
+
+            // Construct URL
+            let url = `/reliability?machine_id=${machineId}`;
+
+            if (fromDate) {
+                url += `&from=${fromDate}`;
+            }
+            if (toDate) {
+                url += `&to=${toDate}`;
+            }
+
+            // Fetch data from server
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    // Process the data and render the plot using uPlot
+
+                    // Extract timestamp and reliability values
+                    const xValues = data.map(entry => entry.timestamp);
+                    const yValues = data.map(entry => entry.reliability / 100);
+
+                    const plotData = [xValues, yValues];
+
+                    // Update or create plot
+                    if (plotInstance) {
+                        plotInstance.setData(plotData);
+                        plotInstance.opts.title = `machine_id: ${machineId}`;
+
+                        // Update plot size based on window dimensions and scaling factor
+                        const windowWidth = window.innerWidth * window.devicePixelRatio;
+                        const windowHeight = window.innerHeight * window.devicePixelRatio;
+                        plotInstance.setSize({ width: windowWidth * 0.8, height: windowHeight * 0.6 });
+                    } else {
+                        // Example: Render plot with uPlot
+                        const windowWidth = window.innerWidth * window.devicePixelRatio;
+                        const windowHeight = window.innerHeight * window.devicePixelRatio;
+                        const opts = {
+                            width: windowWidth * 0.8,
+                            height: windowHeight * 0.6,
+                            title: `machine_id: ${machineId}`,
+                            series: [
+                                {},
+                                {
+                                    stroke: "red",
+                                    fill: "rgba(255,0,0,0.1)",
+                                }
+                            ],
+                        };
+                        plotInstance = new uPlot(opts, plotData, plotContainer);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching data:', error);
+                });
+        }
+
+        // Event listener to update plot when the form is submitted
+        plotForm.addEventListener("submit", function(event) {
+            event.preventDefault();
+            fetchDataAndPlot();
+        });
+
+        // Initial plot rendering
+        fetchDataAndPlot();
+    </script>
+
+</body>
+</html>
