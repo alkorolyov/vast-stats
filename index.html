@@ -26,7 +26,10 @@
                     <input type="text" id="to-date" name="to_date" class="form-control">
                 </div>
                 <div class="col-auto">
-                    <button type="submit" class="btn btn-primary">Plot</button>
+                    <button id="plot-button" type="submit" class="btn btn-primary">Plot</button>
+                </div>
+                <div class="col-auto">
+                    <div id="loading-spinner" class="spinner-border text-primary" role="status"></div>
                 </div>
             </div>
         </form>
@@ -39,6 +42,24 @@
         const plotForm = document.getElementById("plot-form");
         const plotContainer = document.getElementById("plot-container");
         let plotInstance = null;
+
+        // Function to show loading spinner and disable button
+        function showLoading() {
+            const plotButton = document.getElementById("plot-button");
+            const loadingSpinner = document.getElementById("loading-spinner");
+
+            plotButton.disabled = true;
+            loadingSpinner.classList.remove("visually-hidden");
+        }
+
+        // Function to hide loading spinner and enable button
+        function hideLoading() {
+            const plotButton = document.getElementById("plot-button");
+            const loadingSpinner = document.getElementById("loading-spinner");
+
+            plotButton.disabled = false;
+            loadingSpinner.classList.add("visually-hidden");
+        }
 
         // Function to fetch data and update plot
         function fetchDataAndPlot() {
@@ -61,11 +82,18 @@
                 url += `&to=${toDate}`;
             }
 
+            // Show loading spinner and disable button
+            showLoading();
+
             // Fetch data from server
             fetch(url)
                 .then(response => response.json())
                 .then(data => {
                     // Process the data and render the plot using uPlot
+
+                    // Hide loading spinner and enable button
+                    hideLoading();
+
 
                     // Extract timestamp and reliability values
                     const xValues = data.map(entry => entry.timestamp);
@@ -99,6 +127,8 @@
                     }
                 })
                 .catch(error => {
+                    // Hide loading spinner and enable button
+                    hideLoading();
                     console.error('Error fetching data:', error);
                 });
         }
