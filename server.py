@@ -93,11 +93,11 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
         query_params = parse_qs(parsed_url.query)
         logging.debug(f"query_params: {query_params}")
 
-        if parsed_url.path == '/reliability':
-            self.handle_db_request(query_params, 'reliability_ts')
-        elif parsed_url.path == '/rent':
-            self.handle_db_request(query_params, 'rent_ts')
-        elif parsed_url.path == '/plot':
+        # if parsed_url.path == '/reliability':
+        #     self.handle_db_request(query_params, 'reliability_ts')
+        # elif parsed_url.path == '/rent':
+        #     self.handle_db_request(query_params, 'rent_ts')
+        if parsed_url.path == '/plot':
             self.handle_plot_request()
         elif parsed_url.path == '/stats':
             self.handle_stats_request(query_params)
@@ -113,22 +113,22 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
         logging.getLogger().setLevel(logging.INFO)
         logging.info(f"Testing request 2 weeks data")
 
-
-
         vastdb.connect()
-        machines_list = pd.read_sql('SELECT machine_id FROM machine_host_map', vastdb.dbm.conn).machine_id.sample(10)
+        machines_list = vastdb.dbm.table_to_df('machine_host_map').machine_id.sample(10)
         vastdb.close()
 
         start_time = time()
         for machine_id in machines_list:
-        # for machine_id in [4557, 13058, 13528, 12910, 13539, 12110, 12951, 10520, 13641, 9977]:
             json_data = vastdb.get_machine_stats(machine_id, datetime_to_ts('2024-03-06'), None)
-        #     json_data = vastdb.get_machine_stats(machine_id, datetime_to_ts('2024'), None)
-            logging.info(f"machine_id: {machine_id} {time() - start_time:.1f} s")
+            # json_data = vastdb.get_machine_stats(machine_id, datetime_to_ts('2024'), None)
+            # json_data = vastdb.get_machine_stats(machine_id, None, None)
+            logging.info(f"machine_id: {machine_id} {time_ms(time() - start_time)}ms")
 
+        total_time = time_ms(time() - start_time)
         logging.getLogger().setLevel(logging.DEBUG)
 
-        self.send_response(HTTPStatus.OK)
+        html_content = '<html><body>' + f"Request finished in {total_time} ms" + '</body></html>'
+        self.send_html(html_content.encode('utf-8'))
 
     def handle_stats_request(self, query_params: dict) -> dict | None:
         vastdb = self.server.vastdb
@@ -188,14 +188,17 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
             with open('index.html', 'rb') as f:
                 html_content = f.read()
 
-            # Send HTML response to client
-            self.send_response(HTTPStatus.OK)
-            self.send_header('Content-type', 'text/html')
-            self.end_headers()
-            self.wfile.write(html_content)
+            self.send_html(html_content)
 
         except Exception as e:
             self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR, 'Error serving HTML file', str(e))
+
+    def send_html(self, html_content):
+        # Send HTML response to client
+        self.send_response(HTTPStatus.OK)
+        self.send_header('Content-type', 'text/html')
+        self.end_headers()
+        self.wfile.write(html_content)
 
     def send_compressed_json(self, compressed_data):
         self.send_response(HTTPStatus.OK)

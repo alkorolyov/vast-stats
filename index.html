@@ -77,22 +77,37 @@
             return url;
         }
 
-        function updatePlot(plotData, machineId) {
-            // update existing plot with new data
-            plotInstance.setData(plotData);
-            let plotTitle = document.getElementsByClassName("u-title");
-            plotTitle[0].textContent = `machine_id: ${machineId}`;
-        }
+        // function updatePlot(plotData, machineId) {
+        //     // update existing plot with new data
+        //     plotInstance.setData(plotData);
+        //     let plotTitle = document.getElementsByClassName("u-title");
+        //     plotTitle[0].textContent = `machine_id: ${machineId}`;
+        // }
 
         function createPlot(plotData, machineId) {
             const windowWidth = window.innerWidth * window.devicePixelRatio;
             const windowHeight = window.innerHeight * window.devicePixelRatio;
 
+            let muSync = uPlot.sync("moo");
+
+            const cursorOpts = {
+                lock: true,
+                focus: {
+                    prox: 16,
+                },
+                sync: {
+                    key: muSync.key,
+                    setSeries: true,
+                },
+            };
+
+
             // Create and render plot with uPlot
-            const opts = {
+            const opts1 = {
                 width: windowWidth * 0.8, // 80% of window width
                 height: windowHeight * 0.4, // 60% of window height
                 title: `machine_id: ${machineId}`,
+                cursor: cursorOpts,
                 series: [
                     {},
                     {
@@ -103,33 +118,140 @@
                         width: 1/window.devicePixelRatio,
                     },
                 ],
-                // axes: [
-                //     {},
-                //     {
-                //         scale: "%",
-                //         values: (u, v) =>
-                //     },
-                // ]
             };
-            plotInstance = new uPlot(opts, plotData, plotContainer);
+            let plotInstance1 = new uPlot(opts1, [plotData[0], plotData[1]], plotContainer);
 
+            const opts2 = {
+                width: windowWidth * 0.8, // 80% of window width
+                height: windowHeight * 0.4, // 60% of window height
+                title: `machine_id: ${machineId}`,
+                cursor: cursorOpts,
+                series: [
+                    {},
+                    {
+                        label: "num_gpus_rented",
+                        scale: "%",
+                        stroke: "blue",
+                        fill: "rgba(0,0,255,0.1)",
+                        width: 1/window.devicePixelRatio,
+                    },
+                ],
+            };
+            let plotInstance2 = new uPlot(opts2, [plotData[2], plotData[3]], plotContainer);
+
+            const opts3 = {
+                width: windowWidth * 0.8, // 80% of window width
+                height: windowHeight * 0.4, // 60% of window height
+                title: `machine_id: ${machineId}`,
+                cursor: cursorOpts,
+                series: [
+                    {},
+                    {
+                        label: "dph",
+                        scale: "%",
+                        stroke: "green",
+                        fill: "rgba(0,255,0,0.1)",
+                        width: 1/window.devicePixelRatio,
+                    },
+                ],
+            };
+            let plotInstance3 = new uPlot(opts3, [plotData[4], plotData[5]], plotContainer);
+
+        }
+
+        function process(data) {
+            let ts = data[0];
+            let vals = data[1];
+            let ts_processed = [];
+            let vals_processed = [];
+            for (let i=0; i < ts.length - 1; i++) {
+                ts_processed.push(ts[i]);
+                ts_processed.push(ts[i + 1] - 1);
+                vals_processed.push(vals[i]);
+                vals_processed.push(vals[i]);
+            }
+            return [ts_processed, vals_processed];
         }
 
         function unpackJSON(packed) {
             // console.log('unpackJSON', packed, packed.reliability_ts);
-            let data = [
+            console.time('unpack json');
+            rel = [
                 packed.reliability_ts.map(entry => entry.timestamp),
                 packed.reliability_ts.map(entry => entry.reliability / 100),
+            ]
 
-                packed.rent_ts.map(entry => entry.timestamp),
-                packed.rent_ts.map(entry => entry.num_gpus_rented),
+            rent_ts = packed.rent_ts.map(entry => entry.timestamp);
+            rent_vals = packed.rent_ts.map(entry => entry.num_gpus_rented);
 
+            rent_processed = process([rent_ts, rent_vals]);
+
+            cost = [
                 packed.cost_ts.map(entry => entry.timestamp),
                 packed.cost_ts.map(entry => entry.dph_base / 1000),
             ]
+
+            cost_processed = process(cost);
+
+            let data = [
+                rel[0], rel[1],
+                rent_processed[0], rent_processed[1],
+                cost_processed[0], cost_processed[1],
+            ]
+            console.timeEnd('unpack json');
             console.log('data', data);
             return data
         }
+
+        function fillMissingValues(data) {
+            console.time('fillna');
+
+            // Extracting timestamps and values for each timeseries
+            let timestamps = [];
+            let values = [];
+            let numSeries = data.length / 2; // Assuming data is organized as [timestamps1, values1, timestamps2, values2, ...]
+
+            // Initialize filledValues arrays
+            let filledValues = [];
+            for (let i = 0; i < numSeries; i++) {
+                filledValues.push([]);
+            }
+
+            // Extract timestamps and values for each series
+            for (let i = 0; i < numSeries; i++) {
+                timestamps.push(data[i * 2]);
+                values.push(data[i * 2 + 1]);
+            }
+
+            // Finding unique timestamps from all series
+            let allTimestamps = [...new Set(timestamps.flat())].sort();
+
+            // Fill missing values with last existing value
+            for (let i = 0; i < allTimestamps.length; i++) {
+                // Fill missing values for each series
+                for (let j = 0; j < numSeries; j++) {
+                    let index = timestamps[j].indexOf(allTimestamps[i]);
+
+                    if (index !== -1) {
+                        filledValues[j].push(values[j][index]);
+                    } else {
+                        filledValues[j].push(filledValues[j][filledValues[j].length - 1]);
+                    }
+                }
+            }
+
+            // Return the filled timeseries
+            let filledData = [];
+            for (let i = 0; i < numSeries; i++) {
+                filledData.push(allTimestamps);
+                filledData.push(filledValues[i]);
+            }
+
+            console.timeEnd('fillna');
+            console.log('filledData', filledData);
+            return filledData;
+        }
+
 
         // Function to fetch data and update plot
         function handleSubmitForm() {
@@ -156,6 +278,8 @@
                     // console.log(data[0]);
                     // Hide loading spinner and enable button
                     hideLoading();
+
+                    data = fillMissingValues(data);
 
                     if (plotInstance) {
                         updatePlot(data, machineId);

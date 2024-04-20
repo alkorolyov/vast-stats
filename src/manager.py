@@ -191,7 +191,7 @@ class DbManager:
         self.conn.execute(f'CREATE TEMP TABLE IF NOT EXISTS {tbl_name} ({cols_str});')
         self.conn.executemany(f"INSERT INTO {tbl_name} VALUES ({placeholder})", df.values.tolist())
 
-    def get_query_request(self, machine_id, from_ts, to_ts, tbl_name) -> str:
+    def _get_sql_query(self, machine_id, from_ts, to_ts, tbl_name) -> str:
         sql_query = f"SELECT * FROM {tbl_name} WHERE machine_id={machine_id}"
         if from_ts:
             sql_query += f" AND timestamp >= {from_ts}"
@@ -200,7 +200,7 @@ class DbManager:
         return sql_query
 
     def request_to_json(self, machine_id, from_ts, to_ts, tbl_name):
-        sql_query = self.get_query_request(machine_id, from_ts, to_ts, tbl_name)
+        sql_query = self._get_sql_query(machine_id, from_ts, to_ts, tbl_name)
 
         start = time()
         df = pd.read_sql(sql_query, con=self.conn)
