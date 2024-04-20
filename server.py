@@ -115,11 +115,12 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
 
         start_time = time()
         for machine_id in [4557, 13058, 13528, 12910, 13539, 12110, 12951, 10520, 13641, 9977]:
-            logging.info(f"machine_id: {machine_id} {time() - start_time:.1f} s")
             json_data = vastdb.get_machine_stats(machine_id, datetime_to_ts('2024-03-06'), None)
+            logging.info(f"machine_id: {machine_id} {time() - start_time:.1f} s")
 
-        logging.info(f"Finished: {time() - start_time:.1f} s")
         logging.getLogger().setLevel(logging.DEBUG)
+
+        self.send_response(HTTPStatus.OK)
 
 
     def handle_stats_request(self, query_params: dict) -> dict | None:
