@@ -159,18 +159,25 @@
 
         }
 
-        function process(data) {
+        function staircaseFill(data) {
             let ts = data[0];
             let vals = data[1];
-            let ts_processed = [];
-            let vals_processed = [];
+            let ts_filled = [];
+            let vals_filled = [];
+
+            // inserts a point directly preceding a change in status
             for (let i=0; i < ts.length - 1; i++) {
-                ts_processed.push(ts[i]);
-                ts_processed.push(ts[i + 1] - 1);
-                vals_processed.push(vals[i]);
-                vals_processed.push(vals[i]);
+                ts_filled.push(ts[i]);
+                ts_filled.push(ts[i + 1] - 1);
+                vals_filled.push(vals[i]);
+                vals_filled.push(vals[i]);
             }
-            return [ts_processed, vals_processed];
+
+            // add last elements
+            ts_filled.push(ts.at(-1))
+            vals_filled.push(vals.at(-1));
+
+            return [ts_filled, vals_filled];
         }
 
         function unpackJSON(packed) {
@@ -181,29 +188,32 @@
                 packed.reliability_ts.map(entry => entry.reliability / 100),
             ]
 
-            rent_ts = packed.rent_ts.map(entry => entry.timestamp);
-            rent_vals = packed.rent_ts.map(entry => entry.num_gpus_rented);
-
-            rent_processed = process([rent_ts, rent_vals]);
+            rent = [
+                packed.rent_ts.map(entry => entry.timestamp),
+                packed.rent_ts.map(entry => entry.num_gpus_rented)
+            ]
 
             cost = [
                 packed.cost_ts.map(entry => entry.timestamp),
                 packed.cost_ts.map(entry => entry.dph_base / 1000),
             ]
 
-            cost_processed = process(cost);
+
+            rent = staircaseFill(rent);
+            cost = staircaseFill(cost);
+
 
             let data = [
                 rel[0], rel[1],
-                rent_processed[0], rent_processed[1],
-                cost_processed[0], cost_processed[1],
+                rent[0], rent[1],
+                cost[0], cost[1],
             ]
             console.timeEnd('unpack json');
             console.log('data', data);
             return data
         }
 
-        function fillMissingValues(data) {
+        function fillna(data) {
             console.time('fillna');
 
             // Extracting timestamps and values for each timeseries
@@ -279,7 +289,7 @@
                     // Hide loading spinner and enable button
                     hideLoading();
 
-                    data = fillMissingValues(data);
+                    data = fillna(data);
 
                     if (plotInstance) {
                         updatePlot(data, machineId);
