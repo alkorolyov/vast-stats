@@ -117,17 +117,21 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
         machines_list = vastdb.dbm.table_to_df('machine_host_map').machine_id.sample(10)
         vastdb.close()
 
-        start_time = time()
+        times = []
         for machine_id in machines_list:
+            start = time()
             json_data = vastdb.get_machine_stats(machine_id, datetime_to_ts('2024-03-06'), None)
             # json_data = vastdb.get_machine_stats(machine_id, datetime_to_ts('2024'), None)
             # json_data = vastdb.get_machine_stats(machine_id, None, None)
-            logging.info(f"machine_id: {machine_id} {time_ms(time() - start_time)}ms")
+            times.append(time_ms(time() - start))
+            logging.info(f"machine_id: {machine_id} {times[-1]}ms")
 
-        total_time = time_ms(time() - start_time)
         logging.getLogger().setLevel(logging.DEBUG)
+        times = pd.Series(times)
+        msg = f"Request finished in {int(times.mean())} ± {int(times.std())}ms"
+        logging.debug(msg)
 
-        html_content = '<html><body>' + f"Request finished in {total_time} ms" + '</body></html>'
+        html_content = f'<html><body>{msg}</body></html>'
         self.send_html(html_content.encode('utf-8'))
 
     def handle_stats_request(self, query_params: dict) -> dict | None:
