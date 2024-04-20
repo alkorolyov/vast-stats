@@ -113,15 +113,22 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
         logging.getLogger().setLevel(logging.INFO)
         logging.info(f"Testing request 2 weeks data")
 
+
+
+        vastdb.connect()
+        machines_list = pd.read_sql('SELECT machine_id FROM machine_host_map', vastdb.dbm.conn).machine_id.sample(10)
+        vastdb.close()
+
         start_time = time()
-        for machine_id in [4557, 13058, 13528, 12910, 13539, 12110, 12951, 10520, 13641, 9977]:
+        for machine_id in machines_list:
+        # for machine_id in [4557, 13058, 13528, 12910, 13539, 12110, 12951, 10520, 13641, 9977]:
             json_data = vastdb.get_machine_stats(machine_id, datetime_to_ts('2024-03-06'), None)
+        #     json_data = vastdb.get_machine_stats(machine_id, datetime_to_ts('2024'), None)
             logging.info(f"machine_id: {machine_id} {time() - start_time:.1f} s")
 
         logging.getLogger().setLevel(logging.DEBUG)
 
         self.send_response(HTTPStatus.OK)
-
 
     def handle_stats_request(self, query_params: dict) -> dict | None:
         vastdb = self.server.vastdb
