@@ -3,6 +3,7 @@ from __future__ import annotations
 import sqlite3
 import logging
 from time import time
+import pandas as pd
 
 from src.const import HARDWARE_COLS, COST_COLS, EOD_COLS, AVG_COLS
 from src.manager import DbManager
@@ -95,6 +96,20 @@ class VastDB:
     def get_last_ts(self) -> int:
         return self.dbm.get_last_ts(self.ts_idx)
 
+    def get_first_ts(self) -> int:
+        return self.dbm.get_first_ts(self.ts_idx)
+
+    def get_machine_stats(self, machine_id: int, from_ts, to_ts):
+        result = {}
+        self.connect()
+
+        for tbl_name in ['rent_ts', 'reliability_ts', 'cost_ts']:
+            result[tbl_name] = self.dbm.request_to_json(machine_id, from_ts, to_ts, tbl_name)
+
+        self.close()
+        json_data = ('{' + ','.join([f'"{k}": {v}' for (k, v) in result.items()]) + '}').encode('utf-8')
+
+        return json_data
 
 
 

@@ -26,13 +26,13 @@ def _get_dtype(col_name: str) -> str:
 class _Table:
     """
     Base Class for SQL tables.
-    Extracts data from the temporary source table from memory
-    and writes it to database. Each table must implement two methods:
+    Extracts data from the temporary source db_table from memory
+    and writes it to database. Each db_table must implement two methods:
     create(), update().
     """
-    name: str                   # table name
+    name: str                   # db_table name
     cols: List[str]             # list of column names
-    source: str                 # name of the temporary source table
+    source: str                 # name of the temporary source db_table
 
     def __init__(self, name: str, cols: list = None, source: str = None):
         self.name = name
@@ -41,7 +41,7 @@ class _Table:
 
     def create(self, dbm: DbManager):
         """
-        General method to create new table in database
+        General method to create new db_table in database
         """
         pass
 
@@ -54,7 +54,7 @@ class _Table:
 
 class SingleTbl(_Table):
     """
-    A Simple table with one column as a primary key.
+    A Simple db_table with one column as a primary key.
     First row from the source tmp column is taken.
     """
 
@@ -106,9 +106,9 @@ class MapTable(_Table):
 
 class Unique(_Table):
     """
-    Unique key table, which stores a history of unique keys with additional value columns.
-    Each time a new key is found in source table it is stored with value columns and timestamp.
-    If key is already present in table - nothing is done.
+    Unique key db_table, which stores a history of unique keys with additional value columns.
+    Each time a new key is found in source db_table it is stored with value columns and timestamp.
+    If key is already present in db_table - nothing is done.
     """
     def __init__(self, name: str, cols: list, source: str, key_col: str):
         super().__init__(name, cols, source)
@@ -148,12 +148,12 @@ class Timeseries(_Table):
     It optimizes disk space utilization by retaining only updated values while omitting
     unchanged ones. This optimization is achieved through the utilization of two distinct SQL tables:
 
-    - tablename_ts: This table captures the time-series data containing only the altered values.
-    - tablename_snp: This table holds the most recent snapshot of the time-series.
+    - tablename_ts: This db_table captures the time-series data containing only the altered values.
+    - tablename_snp: This db_table holds the most recent snapshot of the time-series.
 
     The process involves invoking the update() method. When this method is called, the new values
-    from the temporary table are compared against the latest snapshot. If any modifications are
-    detected, only the changes are recorded within the timeseries table, and the snapshot is updated.
+    from the temporary db_table are compared against the latest snapshot. If any modifications are
+    detected, only the changes are recorded within the timeseries db_table, and the snapshot is updated.
 
     This class presents an efficient solution for managing time-series data while minimizing the
     storage footprint by concentrating solely on altered data points.
@@ -164,11 +164,11 @@ class Timeseries(_Table):
     t_cols: str  # 't.col1, t.col2, ...'
     cols_dtypes: str  # 'col1 INTEGER, col2 TEXT ...'
     key_col: str  # primary key column name
-    source: str  # source temp table name
+    source: str  # source temp db_table name
     from_altered: str  # sql expression to select only altered values
 
-    timeseries: str  # table name for timeseries
-    snapshot: str  # table name for snapshot
+    timeseries: str  # db_table name for timeseries
+    snapshot: str  # db_table name for snapshot
 
     def __init__(self, name, cols, source='tmp_machines', key_col='machine_id'):
         super().__init__(name, cols, source)

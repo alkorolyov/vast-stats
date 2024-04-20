@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import logging
 import sqlite3
-import json
 
 import pandas as pd
+from time import time
+from src.utils import time_ms
 
 
 class DbManager:
-    """ Class responsible for basic database operations """
+    """ Class responsible for basic low level database operations """
     db_path: str | None
     conn: sqlite3.Connection | None
 
@@ -115,12 +116,21 @@ class DbManager:
     def get_tbl_info(self, name) -> pd.DataFrame:
         return pd.read_sql(f'PRAGMA table_info({name})', self.conn, index_col='cid')
 
-    def get_last_ts(self, name) -> int:
+    def get_last_ts(self, tbl_name) -> int:
         output = self.execute(f'''
             SELECT timestamp
-            FROM {name}
+            FROM {tbl_name}
             ORDER BY ROWID
             DESC LIMIT 1
+        ''').fetchall()
+        return output[0][0] if output else 0
+
+    def get_first_ts(self, tbl_name) -> int:
+        output = self.execute(f'''
+            SELECT timestamp
+            FROM {tbl_name}
+            ORDER BY ROWID
+            ASC LIMIT 1
         ''').fetchall()
         return output[0][0] if output else 0
 
@@ -181,17 +191,22 @@ class DbManager:
         self.conn.execute(f'CREATE TEMP TABLE IF NOT EXISTS {tbl_name} ({cols_str});')
         self.conn.executemany(f"INSERT INTO {tbl_name} VALUES ({placeholder})", df.values.tolist())
 
-    def query_to_json(self, query):
-        cursor = self.conn.cursor()
-        cursor.execute(query)
-        rows = cursor.fetchall()
+    def get_query_request(self, machine_id, from_ts, to_ts, tbl_name) -> str:
+        sql_query = f"SELECT * FROM {tbl_name} WHERE machine_id={machine_id}"
+        if from_ts:
+            sql_query += f" AND timestamp >= {from_ts}"
+        if to_ts:
+            sql_query += f" AND timestamp <= {to_ts}"
+        return sql_query
 
-        # Convert rows to a list of dictionaries
-        result = []
-        for row in rows:
-            result.append(dict(zip([column[0] for column in cursor.description], row)))
+    def request_to_json(self, machine_id, from_ts, to_ts, tbl_name):
+        sql_query = self.get_query_request(machine_id, from_ts, to_ts, tbl_name)
 
-        # Serialize the result to JSON
-        json_data = json.dumps(result)
-        cursor.close()
+        start = time()
+        df = pd.read_sql(sql_query, con=self.conn)
+        logging.debug(f'[{tbl_name.upper()}] read sql {len(df)} records {time_ms(time() - start)}ms')
+
+        start = time()
+        json_data = df.to_json(orient='records')
+        logging.debug(f'[{tbl_name.upper()}] convert to json {time_ms(time() - start)}ms')
         return json_data

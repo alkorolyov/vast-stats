@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 import pandas as pd
 from time import time
 
@@ -16,6 +18,7 @@ from http import HTTPStatus
 
 from src.utils import time_ms
 from src import const
+from src.vastdb import VastDB
 
 logging.basicConfig(format=const.LOG_FORMAT,
                     level=logging.DEBUG,
@@ -26,31 +29,63 @@ def datetime_to_ts(date: str):
     return int(pd.to_datetime(date).timestamp())
 
 
-def get_reliability_sql(params: dict) -> str:
-    # unpack parameters
-    machine_ids = params.get('machine_id')
-    from_dt, to_dt = params.get('from', [None])[0], params.get('to', [None])[0]
+def parse_params(params: dict) -> tuple:
+    machine_id = params.get('machine_id', [None])[0]
+    from_date, to_date = params.get('from', [None])[0], params.get('to', [None])[0]
 
-    if machine_ids is None:
+    if machine_id is None:
         raise ValueError('machine_id is required')
 
-    sql_query = "SELECT * FROM reliability_ts WHERE"
+    try:
+        machine_id = int(machine_id)
+    except ValueError:
+        raise ValueError(f'machine_id should be an integer: {machine_id}')
+
+    from_timestamp = None
+    if from_date:
+        from_timestamp = datetime_to_ts(from_date)
+
+    to_timestamp = None
+    if to_date:
+        to_timestamp = datetime_to_ts(to_date)
+
+    return machine_id, from_timestamp, to_timestamp
+
+
+def get_dbrequest_sql(params: dict, db_table: str) -> str:
+    # unpack parameters
+    machine_ids, from_ts, to_ts = parse_params(params)
+
+    sql_query = f"SELECT * FROM {db_table} WHERE"
 
     # add machine_id
     sql_query += f" machine_id IN ({','.join(machine_ids)})"
 
     # add 'from' and 'to' constraints
-    if from_dt:
-        sql_query += f" AND timestamp >= '{datetime_to_ts(from_dt)}'"
-    if to_dt:
-        sql_query += f" AND timestamp <= '{datetime_to_ts(to_dt)}'"
+    if from_ts:
+        sql_query += f" AND timestamp >= '{from_ts}'"
+    if to_ts:
+        sql_query += f" AND timestamp <= '{to_ts}'"
 
     return sql_query
 
 
+def get_last_value_sql(params: dict, db_table: str) -> str:
+    machine_ids, _, _ = parse_params(params)
+    return f"SELECT * FROM {db_table} WHERE machine_id={machine_ids[0]} ORDER BY timestamp DESC LIMIT 1"
+
+
+def compress_data(json_data):
+    start = time()
+    compressed = gzip.compress(json_data, compresslevel=1)
+    logging.debug(f"compress json:     {time_ms(time() - start)} ms")
+    logging.debug(f"compression ratio: {len(compressed) / len(json_data) * 100:.1f}%")
+    logging.debug(f"data size:         {len(compressed)} bytes")
+    return compressed
+
+
 class RequestHandler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
-        logging.debug(self.server.db_path)
         logging.debug(f"Received request: {self.request}")
 
         parsed_url = urlparse(self.path)
@@ -59,14 +94,40 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
         logging.debug(f"query_params: {query_params}")
 
         if parsed_url.path == '/reliability':
-            self.handle_reliability_request(query_params)
+            self.handle_db_request(query_params, 'reliability_ts')
+        elif parsed_url.path == '/rent':
+            self.handle_db_request(query_params, 'rent_ts')
         elif parsed_url.path == '/plot':
             self.handle_plot_request()
+        elif parsed_url.path == '/stats':
+            self.handle_stats_request(query_params)
+        else:
+            self.send_error(HTTPStatus.NOT_FOUND)
 
-    def handle_reliability_request(self, query_params: dict) -> None:
+    def handle_stats_request(self, query_params: dict) -> dict | None:
+        vastdb = self.server.vastdb
+        try:
+            machine_id, from_ts, to_ts = parse_params(query_params)
+        except ValueError as e:
+            self.send_error(HTTPStatus.BAD_REQUEST, f'Error parsing params {query_params} {e}', str(e))
+
+        try:
+            json_data = vastdb.get_machine_stats(machine_id, from_ts, to_ts)
+        except pd.errors.DatabaseError as e:
+            self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR,
+                            f'Pandas DatabaseError {e}', str(e))
+
+        try:
+            compressed = compress_data(json_data)
+            self.send_compressed_json(compressed)
+        except Exception as e:
+            self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR, f'Error compressing json {query_params}', str(e))
+        return
+
+    def handle_db_request(self, query_params: dict, db_table: str) -> None:
         try:
             with sqlite3.connect(self.server.db_path) as conn:
-                sql_query = get_reliability_sql(query_params)
+                sql_query = get_dbrequest_sql(query_params, db_table)
 
                 start = time()
                 df = pd.read_sql_query(sql_query, conn)
@@ -76,31 +137,24 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
 
             start = time()
             compressed_data = gzip.compress(json_data, compresslevel=1)
-            logging.debug(f"compress json: {time_ms(time() - start)} ms")
+            logging.debug(f"compress json:     {time_ms(time() - start)} ms")
             logging.debug(f"compression ratio: {len(compressed_data) / len(json_data) * 100:.1f}%")
+            logging.debug(f"data size:         {len(compressed_data)} bytes")
 
-            self.send_compressed_data(compressed_data)
-            logging.debug(f"data size: {len(compressed_data)} bytes")
+            self.send_compressed_json(compressed_data)
 
         except sqlite3.DatabaseError as e:
-            self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR, f'SQLite DatabaseError {query_params}', str(e))
+            self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR, f'SQLite DatabaseError {query_params} {db_table}', str(e))
         except pd.errors.DatabaseError as e:
-            self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR, f'Pandas DatabaseError {query_params} {sql_query}', str(e))
+            self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR, f'Pandas DatabaseError {query_params} {sql_query} {db_table}', str(e))
         except ValueError as e:
             self.send_error(HTTPStatus.BAD_REQUEST, f'ValueError during Parsing {query_params}', str(e))
         except TypeError as e:
-            self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR, f'Reliability GET TypeError', str(e))
+            self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR, f'GET TypeError', str(e))
         except OSError as e:
-            self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR, f"Reliability GET OSError", str(e))
+            self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR, f"GET OSError", str(e))
         except Exception as e:
-            self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR, 'Reliability GET General exception', str(e))
-
-    def send_compressed_data(self, compressed_data):
-        self.send_response(HTTPStatus.OK)
-        self.send_header('Content-type', 'application/json')
-        self.send_header('Content-Encoding', 'gzip')
-        self.end_headers()
-        self.wfile.write(compressed_data)
+            self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR, 'GET General exception', str(e))
 
     def handle_plot_request(self):
         try:
@@ -117,6 +171,12 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
         except Exception as e:
             self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR, 'Error serving HTML file', str(e))
 
+    def send_compressed_json(self, compressed_data):
+        self.send_response(HTTPStatus.OK)
+        self.send_header('Content-type', 'application/json')
+        self.send_header('Content-Encoding', 'gzip')
+        self.end_headers()
+        self.wfile.write(compressed_data)
 
 if __name__ == "__main__":
 
@@ -129,6 +189,7 @@ if __name__ == "__main__":
     port = args.get('port')
 
     with socketserver.TCPServer(("", port), RequestHandler) as httpd:
-        httpd.db_path = db_path
-        print(f"Server listening on port {port}")
+        httpd.vastdb = VastDB(db_path)
+        logging.debug(db_path)
+        logging.debug(f"Server listening on port {port}")
         httpd.serve_forever()

@@ -11,25 +11,25 @@
 </head>
 <body>
     <div class="container">
-        <form id="plot-form" class="bg-light p-4 rounded shadow">
-            <div class="row mb-3">
-                <label for="machine-id" class="col-auto col-form-label">Machine ID:</label>
-                <div class="col-auto">
-                    <input type="text" id="machine-id" name="machine_id" class="form-control">
+        <form id="plot-form" class="bg-light p-2 rounded shadow">
+            <div class="row" >
+                <label for="machine-id" class="col-auto col-form-label-sm">Machine ID:</label>
+                <div class="col-auto ">
+                    <input type="text" id="machine-id" name="machine_id" class="form-control form-control-sm">
                 </div>
-                <label for="from-date" class="col-auto col-form-label">From:</label>
+                <label for="from-date" class="col-auto col-form-label-sm">From:</label>
                 <div class="col-auto">
-                    <input type="text" id="from-date" name="from_date" class="col-auto form-control">
+                    <input type="text" id="from-date" name="from_date" class="col-auto form-control form-control-sm">
                 </div>
-                <label for="to-date" class="col-auto col-form-label">To:</label>
+                <label for="to-date" class="col-auto col-form-label-sm">To:</label>
                 <div class="col-auto">
-                    <input type="text" id="to-date" name="to_date" class="form-control">
-                </div>
-                <div class="col-auto">
-                    <button id="plot-button" type="submit" class="btn btn-primary">Plot</button>
+                    <input type="text" id="to-date" name="to_date" class="form-control form-control-sm">
                 </div>
                 <div class="col-auto">
-                    <div id="loading-spinner" class="spinner-border text-primary" role="status"></div>
+                    <button id="plot-button" type="submit" class="btn btn-primary btn-sm">Plot</button>
+                </div>
+                <div class="col-auto">
+                    <div id="loading-spinner" class="spinner-border spinner-sm text-primary visually-hidden" role="status"></div>
                 </div>
             </div>
         </form>
@@ -61,69 +61,106 @@
             loadingSpinner.classList.add("visually-hidden");
         }
 
-        // Function to fetch data and update plot
-        function fetchDataAndPlot() {
-            // Get form values
-            const machineId = document.getElementById("machine-id").value;
-            const fromDate = document.getElementById("from-date").value;
-            const toDate = document.getElementById("to-date").value;
-            console.log(machineId, fromDate, toDate);
-
-            const windowWidth = window.innerWidth * window.devicePixelRatio;
-            const windowHeight = window.innerHeight * window.devicePixelRatio;
-
+        function getUrl(machineId, fromDate, toDate) {
             // Construct URL
-            let url = `/reliability?machine_id=${machineId}`;
+            let url = `/stats`;
 
+            if (machineId) {
+                url += `?machine_id=${machineId}`;
+            }
             if (fromDate) {
                 url += `&from=${fromDate}`;
             }
             if (toDate) {
                 url += `&to=${toDate}`;
             }
+            return url;
+        }
+
+        function updatePlot(plotData, machineId) {
+            // update existing plot with new data
+            plotInstance.setData(plotData);
+            let plotTitle = document.getElementsByClassName("u-title");
+            plotTitle[0].textContent = `machine_id: ${machineId}`;
+        }
+
+        function createPlot(plotData, machineId) {
+            const windowWidth = window.innerWidth * window.devicePixelRatio;
+            const windowHeight = window.innerHeight * window.devicePixelRatio;
+
+            // Create and render plot with uPlot
+            const opts = {
+                width: windowWidth * 0.8, // 80% of window width
+                height: windowHeight * 0.4, // 60% of window height
+                title: `machine_id: ${machineId}`,
+                series: [
+                    {},
+                    {
+                        label: "reliability",
+                        scale: "%",
+                        stroke: "red",
+                        fill: "rgba(255,0,0,0.1)",
+                        width: 1/window.devicePixelRatio,
+                    },
+                ],
+                // axes: [
+                //     {},
+                //     {
+                //         scale: "%",
+                //         values: (u, v) =>
+                //     },
+                // ]
+            };
+            plotInstance = new uPlot(opts, plotData, plotContainer);
+
+        }
+
+        function unpackJSON(packed) {
+            // console.log('unpackJSON', packed, packed.reliability_ts);
+            let data = [
+                packed.reliability_ts.map(entry => entry.timestamp),
+                packed.reliability_ts.map(entry => entry.reliability / 100),
+
+                packed.rent_ts.map(entry => entry.timestamp),
+                packed.rent_ts.map(entry => entry.num_gpus_rented),
+
+                packed.cost_ts.map(entry => entry.timestamp),
+                packed.cost_ts.map(entry => entry.dph_base / 1000),
+            ]
+            console.log('data', data);
+            return data
+        }
+
+        // Function to fetch data and update plot
+        function handleSubmitForm() {
+            // Get form values
+            const machineId = document.getElementById("machine-id").value;
+            const fromDate = document.getElementById("from-date").value;
+            const toDate = document.getElementById("to-date").value;
+            console.log(machineId, fromDate, toDate);
+
+            let url = getUrl(machineId, fromDate, toDate);
 
             // Show loading spinner and disable button
             showLoading();
 
             // Fetch data from server
             fetch(url)
-                .then(response => response.json())
+                .then(response => {
+                    console.log(response);
+                    return response.json();
+                })
+                .then(packed => unpackJSON(packed))
                 .then(data => {
-                    // Process the data and render the plot using uPlot
-
+                    // console.log(data);
+                    // console.log(data[0]);
                     // Hide loading spinner and enable button
                     hideLoading();
 
-
-                    // Extract timestamp and reliability values
-                    const xValues = data.map(entry => entry.timestamp);
-                    const yValues = data.map(entry => entry.reliability / 100);
-
-                    const plotData = [xValues, yValues];
-
-
                     if (plotInstance) {
-                        // update existing plot with new data
-                        plotInstance.setData(plotData);
-                        plotInstance.opts.title = `machine_id: ${machineId}`;
-
-                        // Update plot size based on window dimensions and scaling factor
-                        plotInstance.setSize({ width: windowWidth * 0.8, height: windowHeight * 0.6 });
+                        updatePlot(data, machineId);
                     } else {
-                        // Create and render plot with uPlot
-                        const opts = {
-                            width: windowWidth * 0.8,
-                            height: windowHeight * 0.6,
-                            title: `machine_id: ${machineId}`,
-                            series: [
-                                {},
-                                {
-                                    stroke: "red",
-                                    fill: "rgba(255,0,0,0.1)",
-                                }
-                            ],
-                        };
-                        plotInstance = new uPlot(opts, plotData, plotContainer);
+                        createPlot(data, machineId);
                     }
                 })
                 .catch(error => {
@@ -136,11 +173,9 @@
         // Event listener to update plot when the form is submitted
         plotForm.addEventListener("submit", function(event) {
             event.preventDefault();
-            fetchDataAndPlot();
+            handleSubmitForm();
         });
 
-        // Initial plot rendering
-        fetchDataAndPlot();
     </script>
 
 </body>

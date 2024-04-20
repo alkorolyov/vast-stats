@@ -91,7 +91,7 @@ def _get_dtype(col_name: str) -> str:
 class _Table:
     """
     Base Class for SQL tables.
-    Each table has a name and must implement two methods,
+    Each db_table has a name and must implement two methods,
     init_db, write_db.
     """
     name: str  # Table name
@@ -116,7 +116,7 @@ class _Table:
 
 class Table(_Table):
     """
-    Simple table with single value, acting as a primary key.
+    Simple db_table with single value, acting as a primary key.
     Value taken from tmp_table.
     """
 
@@ -177,12 +177,12 @@ class Timeseries(_Table):
     It optimizes disk space utilization by retaining only updated values while omitting
     unchanged ones. This optimization is achieved through the utilization of two distinct SQL tables:
 
-    - tablename_ts: This table captures the time-series data containing only the altered values.
-    - tablename_snp: This table holds the most recent snapshot of the time-series.
+    - tablename_ts: This db_table captures the time-series data containing only the altered values.
+    - tablename_snp: This db_table holds the most recent snapshot of the time-series.
 
     The process involves invoking the write_db() method. When this method is called, the new values
-    from the temporary table are compared against the latest snapshot. If any modifications are
-    detected, only the changes are recorded within the timeseries table, and the snapshot is updated.
+    from the temporary db_table are compared against the latest snapshot. If any modifications are
+    detected, only the changes are recorded within the timeseries db_table, and the snapshot is updated.
 
     This class presents an efficient solution for managing time-series data while minimizing the
     storage footprint by concentrating solely on altered data points.
@@ -193,11 +193,11 @@ class Timeseries(_Table):
     t_cols: str  # 't.col1, t.col2, ...'
     cols_dtypes: str  # 'col1 INTEGER, col2 TEXT ...'
     key_col: str  # primary key column name
-    tmp_table: str  # source temp table name
+    tmp_table: str  # source temp db_table name
     from_altered: str  # sql expression to select only altered values
 
-    timeseries: str  # table name for timeseries
-    snapshot: str  # table name for snapshot
+    timeseries: str  # db_table name for timeseries
+    snapshot: str  # db_table name for snapshot
 
     def __init__(self, name: str, cols: list, source: str = 'machines'):
         super().__init__(name, cols)
@@ -522,7 +522,7 @@ def get_tables(conn) -> list:
            (SELECT * FROM sqlite_master UNION ALL
             SELECT * FROM sqlite_temp_master)
     WHERE
-        type ='table' AND
+        type ='db_table' AND
         name NOT LIKE 'sqlite_%';
     ''').fetchall()
     return [x[0] for x in res]
