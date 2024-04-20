@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import json
+import sys
 
 import pandas as pd
 from time import time
@@ -221,4 +221,9 @@ if __name__ == "__main__":
         httpd.vastdb = VastDB(db_path)
         logging.debug(db_path)
         logging.debug(f"Server listening on port {port}")
-        httpd.serve_forever()
+        try:
+            httpd.serve_forever()
+        except KeyboardInterrupt:
+            logging.debug("Keyboard interrupt received, shutting down server")
+            httpd.server_close()
+            sys.exit(0)  # Optional, to exit the script after cleanup
