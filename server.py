@@ -101,8 +101,26 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
             self.handle_plot_request()
         elif parsed_url.path == '/stats':
             self.handle_stats_request(query_params)
+        elif parsed_url.path == '/test':
+            self.handle_test_request()
         else:
             self.send_error(HTTPStatus.NOT_FOUND)
+
+
+    def handle_test_request(self) -> None:
+        vastdb = self.server.vastdb
+
+        logging.getLogger().setLevel(logging.INFO)
+        logging.info(f"Testing request 2 weeks data")
+
+        start_time = time()
+        for machine_id in [4557, 13058, 13528, 12910, 13539, 12110, 12951, 10520, 13641, 9977]:
+            logging.info(f"machine_id: {machine_id} {time() - start_time:.1f} s")
+            json_data = vastdb.get_machine_stats(machine_id, datetime_to_ts('2024-03-06'), None)
+
+        logging.info(f"Finished: {time() - start_time:.1f} s")
+        logging.getLogger().setLevel(logging.DEBUG)
+
 
     def handle_stats_request(self, query_params: dict) -> dict | None:
         vastdb = self.server.vastdb

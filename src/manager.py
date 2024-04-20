@@ -206,7 +206,7 @@ class DbManager:
         df = pd.read_sql(sql_query, con=self.conn)
         logging.debug(f'[{tbl_name.upper()}] read sql {len(df)} records {time_ms(time() - start)}ms')
 
-        start = time()
+        # start = time()
         json_data = df.to_json(orient='records')
-        logging.debug(f'[{tbl_name.upper()}] convert to json {time_ms(time() - start)}ms')
+        # logging.debug(f'[{tbl_name.upper()}] convert to json {time_ms(time() - start)}ms')
         return json_data
