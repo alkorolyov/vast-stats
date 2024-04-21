@@ -41,7 +41,7 @@
 
         const plotForm = document.getElementById("plot-form");
         const plotContainer = document.getElementById("plot-container");
-        let plotInstance = null;
+        let plots = null;
 
         // Function to show loading spinner and disable button
         function showLoading() {
@@ -77,16 +77,19 @@
             return url;
         }
 
-        // function updatePlot(plotData, machineId) {
-        //     // update existing plot with new data
-        //     plotInstance.setData(plotData);
-        //     let plotTitle = document.getElementsByClassName("u-title");
-        //     plotTitle[0].textContent = `machine_id: ${machineId}`;
-        // }
+        function updatePlot(data) {
+            // update existing plots with new data
+            for (let i=0; i < plots.length; i++) {
+                plots[i].setData([data[2*i], data[2*i + 1]]);
+                // let plotTitle = document.getElementsByClassName("u-title");
+                // plotTitle[i].textContent = `machine_id: ${machineId}`;
+            }
+        }
 
-        function createPlot(plotData, machineId) {
+        function createPlot(data) {
             const windowWidth = window.innerWidth * window.devicePixelRatio;
             const windowHeight = window.innerHeight * window.devicePixelRatio;
+            plots = [];
 
             let muSync = uPlot.sync("moo");
 
@@ -105,8 +108,8 @@
             // Create and render plot with uPlot
             const opts1 = {
                 width: windowWidth * 0.8, // 80% of window width
-                height: windowHeight * 0.4, // 60% of window height
-                title: `machine_id: ${machineId}`,
+                height: windowHeight * 0.2, // 60% of window height
+                // title: `machine_id: ${machineId}`,
                 cursor: cursorOpts,
                 series: [
                     {},
@@ -119,12 +122,13 @@
                     },
                 ],
             };
-            let plotInstance1 = new uPlot(opts1, [plotData[0], plotData[1]], plotContainer);
+
+            plots.push(new uPlot(opts1, [data[0], data[1]], plotContainer));
 
             const opts2 = {
                 width: windowWidth * 0.8, // 80% of window width
-                height: windowHeight * 0.4, // 60% of window height
-                title: `machine_id: ${machineId}`,
+                height: windowHeight * 0.2, // 60% of window height
+                // title: `machine_id: ${machineId}`,
                 cursor: cursorOpts,
                 series: [
                     {},
@@ -137,12 +141,13 @@
                     },
                 ],
             };
-            let plotInstance2 = new uPlot(opts2, [plotData[2], plotData[3]], plotContainer);
+
+            plots.push(new uPlot(opts2, [data[2], data[3]], plotContainer));
 
             const opts3 = {
                 width: windowWidth * 0.8, // 80% of window width
-                height: windowHeight * 0.4, // 60% of window height
-                title: `machine_id: ${machineId}`,
+                height: windowHeight * 0.2, // 60% of window height
+                // title: `machine_id: ${machineId}`,
                 cursor: cursorOpts,
                 series: [
                     {},
@@ -155,8 +160,8 @@
                     },
                 ],
             };
-            let plotInstance3 = new uPlot(opts3, [plotData[4], plotData[5]], plotContainer);
 
+            plots.push(new uPlot(opts3, [data[4], data[5]], plotContainer));
         }
 
         function staircaseFill(data) {
@@ -278,23 +283,19 @@
 
             // Fetch data from server
             fetch(url)
-                .then(response => {
-                    console.log(response);
-                    return response.json();
-                })
+                .then(response => response.json())
                 .then(packed => unpackJSON(packed))
+                .then(data => fillna(data))
                 .then(data => {
                     // console.log(data);
                     // console.log(data[0]);
                     // Hide loading spinner and enable button
                     hideLoading();
 
-                    data = fillna(data);
-
-                    if (plotInstance) {
-                        updatePlot(data, machineId);
+                    if (plots) {
+                        updatePlot(data);
                     } else {
-                        createPlot(data, machineId);
+                        createPlot(data);
                     }
                 })
                 .catch(error => {
