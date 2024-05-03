@@ -56,9 +56,10 @@ def main():
 
         # TODO temporary add isp column
         info = vast.dbm.get_tbl_info('eod_snp')
-        if 'isp' not in info:
+        if 'isp' not in info.name.values:
             vast.dbm.execute("ALTER TABLE eod_snp ADD isp TEXT DEFAULT ''")
             vast.dbm.execute("ALTER TABLE eod_ts ADD isp TEXT DEFAULT ''")
+            vast.dbm.commit()
 
     logging.info('[MAIN] Tables created')
 
