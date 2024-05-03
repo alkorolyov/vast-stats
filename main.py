@@ -131,14 +131,5 @@ def main():
         sleep(next_timeout(const.TIMEOUT))
 
 
-def signal_handler(sig, frame):
-    logging.warning('[SIGTERM] Received termination signal')
-    print("Received signal:", sig)
-    print("Current frame:", frame)
-    # Clean up resources or perform any necessary shutdown actions
-    # For example, stop the infinite loop
-    sys.exit(0)
-
-
 if __name__ == '__main__':
     main()
