@@ -5,17 +5,22 @@
 VAST_EXPORTER_BASEURL = 'https://500.farm/vastai-exporter'
 VAST_EXPORTER_TIMEOUT = 5
 VAST_API_BASEURL = 'https://console.vast.ai'
-VAST_API_TIMEOUT = 25   # vast-api takes longer to get response
+VAST_API_TIMEOUT = 25   # vast-api takes longer to pop response
 
 RETRY_TIMEOUT = 20      # timeout between failed retries
 TIMEOUT = 53            # main cycle timeout. `53` is average for '500.farm' source
-
-PORT = 8080             # port number for web server
 
 # Define logging options
 LOG_FORMAT = '[%(asctime)s] [%(levelname)s] %(message)s'
 MAX_LOGSIZE = 1024 * 1024  # 1Mb
 LOG_COUNT = 3
+
+VERIFIED_ENUM = {
+    'unverified': 0,
+    'verified': 1,
+    'deverified': 2,
+    'de-verified': 3
+}
 
 # Define column names and types for incoming data
 INT_COLS = ['has_avx', 'bw_nvlink', 'cpu_cores', 'cpu_ram', 'hosting_type', 'disk_space',
@@ -52,9 +57,7 @@ HARDWARE_COLS = ['compute_cap', 'total_flops',
 
 EOD_COLS = ['cuda_max_good', 'driver_version', 'direct_port_count',
             'min_chunk', 'verification', 'end_date',
-            'country',
-            # 'isp',
-            'public_ipaddr', 'static_ip']
+            'country', 'isp', 'public_ipaddr', 'static_ip']
 
 COST_COLS = ['dph_base', 'storage_cost', 'inet_up_cost',
              'inet_down_cost', 'min_bid', 'credit_discount_max']
@@ -70,3 +73,4 @@ KEEP_COLS = (AVG_COLS +
              COST_COLS +
              ID_COLS +
              SINGLE_COLS)
+

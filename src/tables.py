@@ -325,9 +325,9 @@ class AverageStd(Timeseries):
         dbm.execute(f'DELETE FROM {self.snapshot}')
 
 
-class OnlineTS:
+class OnlineTS(_Table):
     def __init__(self, name: str, machines_tbl: str):
-        self.name = name
+        super().__init__(name)
         self.machines_tbl = machines_tbl
         self.timeseries = name + '_ts'
         self.snapshot = name + '_snp'

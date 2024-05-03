@@ -12,10 +12,9 @@ git clone https://github.com/alkorolyov/vast-stats; cd vast-stats; sudo bash ./i
 
 [//]: # (gcloud compute scp {vm_instance_name}:/var/lib/vast-stats/vast.db vast.db)
 
-cd C:\Users\ergot\DataspellProjects\vast-stats\data
-gcloud compute scp free-ubn20:/var/lib/vast-stats/vast.db vast.db
+cd C:\Users\ergot\DataspellProjects\vast-stats
 
-gcloud compute scp free-ubn20:/home/ergot/vast-stats/vast.db vast_gc.db
+gcloud compute scp --port 22222 free-ubn20:/home/ergot/vast.db vast.db
 
 # free google cloud vm
 * Machine type: e2-micro

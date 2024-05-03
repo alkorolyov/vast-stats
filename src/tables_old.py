@@ -5,7 +5,8 @@ from typing import List
 
 from pandas import DataFrame
 from src.utils import np_min_chunk
-from src.preprocess import split_raw, preprocess
+from src.preprocess import preprocess
+from src.split import split_raw
 from src import const
 
 offers_url = 'https://500.farm/vastai-exporter/offers'

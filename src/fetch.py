@@ -11,7 +11,8 @@ from urllib.parse import quote_plus
 from src import const
 from src.utils import time_utc_now, ts_utc_now
 from src.manager import DbManager
-from src.preprocess import preprocess, split_raw
+from src.preprocess import preprocess
+from src.split import split_raw
 from time import sleep, time
 
 logging.getLogger("urllib3").setLevel(logging.WARNING)
@@ -66,7 +67,7 @@ def _get_sources():
     return sources
 
 
-def _get_raw(url, timeout) -> pd.DataFrame | None:
+def _request(url, timeout) -> pd.DataFrame | None:
 
     r = requests.get(url, timeout=timeout)
     r.raise_for_status()
@@ -86,7 +87,7 @@ def _get_raw(url, timeout) -> pd.DataFrame | None:
         logging.warning(f"No 'offers' in response from {url}")
         return None
 
-    _ts = r_dict.get('timestamp', time_now)
+    _ts = r_dict.pop('timestamp', time_now)
     ts = int(pd.to_datetime(_ts).timestamp())
 
     raw = pd.DataFrame(r_dict['offers'])
@@ -94,22 +95,16 @@ def _get_raw(url, timeout) -> pd.DataFrame | None:
     return raw
 
 
-def fetch_single_source(source, max_tries=3) -> pd.DataFrame | None:
+def fetch_from_source(source, max_tries=3) -> pd.DataFrame | None:
     # unpack params
-    src_name, url, timeout, to_split = source['name'], source['url'], source['timeout'], source['to_split']
+    src_name, url, timeout = source['name'], source['url'], source['timeout']
     logging.info(f"[API] fetching data from '{src_name}'")
 
     for i in range(1, max_tries + 1):
         try:
-            raw = _get_raw(url, timeout)
+            raw = _request(url, timeout)
             assert raw is not None
-
-            preprocess(raw)
-            if to_split:
-                machines, _ = split_raw(raw)
-            else:
-                machines = raw
-            return machines
+            return raw
 
         except AssertionError as e:
             logging.warning(f"[API] Empty 'raw' fetching from '{src_name}': {e}")
@@ -135,7 +130,7 @@ def fetch_single_source(source, max_tries=3) -> pd.DataFrame | None:
     return None
 
 
-def fetch_sources(last_ts: int = 0) -> pd.DataFrame | None:
+def fetch_raw(last_ts: int = 0) -> pd.DataFrame | None:
     """
     default source: 500.farm, fetch only 500.farm
     when ts == ts_db: wait 1x timeout, repeat
@@ -151,12 +146,12 @@ def fetch_sources(last_ts: int = 0) -> pd.DataFrame | None:
     """
     sources = _get_sources()
     for source in sources:
-        machines = fetch_single_source(source)
+        raw = fetch_from_source(source)
 
-        if machines is None:
+        if raw is None:
             continue
 
-        ts = machines.timestamp.iloc[0]
+        ts = raw.timestamp.iloc[0]
 
         # timestamp is too old - switch to next source
         # if time() - ts > 2 * const.TIMEOUT:
@@ -168,7 +163,7 @@ def fetch_sources(last_ts: int = 0) -> pd.DataFrame | None:
             logging.warning(f"[API] '{source['name']}' Response is already recorded")
             return None
 
-        return machines
+        return raw
 
     logging.warning(f'[API] Failed to fetch data from any source')
     return None

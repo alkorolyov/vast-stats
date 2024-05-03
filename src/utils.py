@@ -1,5 +1,8 @@
 import gc
+import queue
+from collections import deque
 import logging
+import traceback
 import math
 from time import time
 import numpy as np
@@ -129,7 +132,7 @@ def np_min_chunk(raw: pd.DataFrame) -> pd.DataFrame:
 
     idx = (min_chunk_count == 1) & (group_count >= 3)
 
-    # get second minimum, correct for last index
+    # pop second minimum, correct for last index
     second_min_idx = slice_idx + 1
     if second_min_idx[-1] == machine_ids.size:
         second_min_idx[-1] -= 1
@@ -234,6 +237,11 @@ def reduce_mem_usage(df, subset=None, int_cast=True, obj_to_category=False, verb
     return df
 
 
+def get_error_info(e: Exception):
+    err_msg = '\n'.join(traceback.format_exception(type(e), e, e.__traceback__))
+    return err_msg
+
+
 def read_last_n_lines(filename, n):
     try:
         with open(filename, 'r') as file:
@@ -242,3 +250,48 @@ def read_last_n_lines(filename, n):
     except Exception as e:
         logging.warning(f"Error reading file: {e}")
         return None
+
+
+class setqueue(object):
+    def __init__(self, values=None, maxlen=None):
+        queue: deque
+        unique_set: set
+
+        if isinstance(values, (int, float, str)):
+            self.queue = deque([values])
+            self.unique_set = {values}
+        elif values:
+            self.queue = deque(values)
+            self.unique_set = set(values)
+        else:
+            self.queue = deque()
+            self.unique_set = {}
+
+        self.maxlen = maxlen
+
+    def put(self, item):
+        if item not in self.unique_set:
+            self.queue.append(item)
+            self.unique_set.add(item)
+        if self.maxlen and len(self) > self.maxlen:
+            self.pop()
+
+    def __add__(self, other):
+        self.put(other)
+        return self
+
+    def pop(self):
+        if len(self.queue) > 0:
+            item = self.queue.popleft()
+            self.unique_set.remove(item)
+            return item
+
+    def __len__(self):
+        return len(self.queue)
+
+    def __str__(self):
+        return str(list(self.queue))
+
+    def __repr__(self):
+        return str(list(self.queue))
+

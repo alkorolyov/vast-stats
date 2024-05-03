@@ -1,18 +1,18 @@
 #!/usr/bin/python3
-import math
+import sys
 import argparse
 import pandas as pd
 import datetime as dt
 import logging
-import traceback
 from logging.handlers import RotatingFileHandler
 
 from time import sleep, time
 # from memory_profiler import profile
 
 from src import const
-from src.fetch import fetch_sources
-from src.utils import time_ms, next_timeout, read_last_n_lines
+from src.fetch import fetch_raw
+from src.preprocess import preprocess
+from src.utils import time_ms, next_timeout, read_last_n_lines, get_error_info, setqueue
 from src.vastdb import VastDB
 from src.email import send_error_email
 
@@ -48,65 +48,82 @@ def main():
                         level=log_level,
                         datefmt='%d-%m-%Y %I:%M:%S')
 
-
     # create db
     logging.info('[MAIN] Script started')
-    vast = VastDB(db_path)
-    vast.connect()
-    vast.create_tables()
-    vast.close()
+
+    with VastDB(db_path) as vast:
+        vast.create_tables()
+
+        # TODO temporary add isp column
+        info = vast.dbm.get_tbl_info('eod_snp')
+        if 'isp' not in info:
+            vast.dbm.execute("ALTER TABLE eod_snp ADD isp TEXT DEFAULT ''")
+            vast.dbm.execute("ALTER TABLE eod_ts ADD isp TEXT DEFAULT ''")
+
     logging.info('[MAIN] Tables created')
 
     # main cycle
     while True:
+
         start = time()
 
-        vast.connect()
-        last_ts = vast.get_last_ts()
-        vast.close()
-        logging.debug(f"[DB] last timestamp {dt.datetime.fromtimestamp(last_ts)}")
+        with VastDB(db_path) as vast:
+            last_ts = vast.get_last_ts()
+            logging.debug(f"[DB] last timestamp {dt.datetime.fromtimestamp(last_ts)}")
 
+        # fetch
         try:
-            machines = fetch_sources(last_ts)
+            raw = fetch_raw(last_ts)
 
-            if machines is None:
+            if raw is None:
                 sleep(next_timeout(const.TIMEOUT))
                 continue
 
-            dt_source = dt.datetime.fromtimestamp(machines.timestamp.iloc[0])
+            dt_source = dt.datetime.fromtimestamp(raw.timestamp.iloc[0])
             logging.debug(f"[API] source_ts: [{dt_source.time()}]")
             logging.debug(f"[API] ts - now : {(dt.datetime.now().replace(microsecond=0) - dt_source)}")
             # if dt_source < dt_last:
             #     logging.info(f"[API] last_ts-ts: {dt_last - dt_source}")
 
         except Exception as e:
-            msg = '\n'.join(traceback.format_exception(type(e), e, e.__traceback__))
-            logs = read_last_n_lines(log_path, 10)
-
-            logging.error(msg)
-            send_error_email('VAST-STATS error', f"Error message:\n{msg}\nLogs:\n{logs}")
+            logging.error("[FETCH] Fetching error", get_error_info(e))
+            send_error_email('VAST-STATS CRUSHED', get_error_info(e))
             raise
 
         logging.debug(f'[API] Request completed in {time() - start:.2f}s')
 
+        # preprocessing
+        start_preprocess = time()
+
+        try:
+            machines = preprocess(raw)
+
+        except Exception as e:
+            logging.error("[PROCESS] Preprocessing failed", get_error_info(e))
+            send_error_email('VAST-STATS CRUSHED', get_error_info(e))
+            raise
+
+
+        logging.debug(f"[PREPROCESS] Completed in {time_ms(time() - start_preprocess)}ms")
+        # exit(0)
+
         start_total_db = time()
 
-        vast.connect()
-
-        start = time()
-        vast.create_tmp_tables(machines)
-        logging.debug(f'[TMP_TABLES] created in {time_ms(time() - start)}ms')
-
-        rows = vast.update_tables()
-        vast.commit()
-        logging.info(f'[TOTAL_DB] {rows} rows updated in {time_ms(time() - start_total_db)}ms')
-
-        if vast.avg_updated:
+        # update db
+        with VastDB(db_path) as vast:
             start = time()
-            vast.vacuum()
-            logging.info(f'[TOTAL_DB] Vacuum in {time_ms(time() - start)}ms')
+            vast.create_tmp_tables(machines)
+            logging.debug(f'[TMP_TABLES] created in {time_ms(time() - start)}ms')
 
-        vast.close()
+            rows = vast.update_tables()
+            vast.commit()
+            logging.info(f'[TOTAL_DB] {rows} rows updated in {time_ms(time() - start_total_db)}ms')
+
+            if vast.avg_updated:
+                start = time()
+                vast.vacuum()
+                logging.info(f'[TOTAL_DB] Vacuum in {time_ms(time() - start)}ms')
+
         logging.debug('=' * 50)
 
         # break

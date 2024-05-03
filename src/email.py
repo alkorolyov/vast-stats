@@ -3,6 +3,8 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import logging
 
+
+
 def send_error_email(subject, body):
     # Email configuration
     sender_email = 'ergot.notification@gmail.com'
@@ -35,3 +37,8 @@ def send_error_email(subject, body):
     finally:
         # Close the SMTP server
         server.quit()
+
+
+# TODO remove in production
+# def send_error_email(subject, body):
+#     pass
