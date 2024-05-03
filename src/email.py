@@ -40,5 +40,6 @@ def send_error_email(subject, body):
 
 
 # TODO remove in production
-# def send_error_email(subject, body):
-#     pass
+def send_error_email(subject, body):
+    logging.info("Email should be sent!")
+    pass

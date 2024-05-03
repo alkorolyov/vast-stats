@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import signal
 import sqlite3
 import logging
 from time import time
@@ -23,6 +24,7 @@ class VastDB:
         # self.ts_idx = 'ts_idx'
         self.tables = {}
         self.init_tables()
+        signal.signal(signal.SIGTERM, self.handle_sigterm)
 
     def __enter__(self):
         try:
@@ -48,6 +50,12 @@ class VastDB:
             logging.error(msg)
             send_error_email('VAST-STATS CRUSHED', msg)
             raise
+
+    def handle_sigterm(self, signum, frame):
+        logging.warning('[OS] Received SIGTERM signal')
+        if self.dbm.conn:
+            self.dbm.close()
+        exit(0)
 
     def connect(self):
         self.dbm.connect()
