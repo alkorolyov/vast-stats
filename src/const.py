@@ -12,8 +12,8 @@ TIMEOUT = 53            # main cycle timeout. `53` is average for '500.farm' sou
 
 # Define logging options
 LOG_FORMAT = '[%(asctime)s] [%(levelname)s] %(message)s'
-MAX_LOGSIZE = 1024 * 1024  # 1Mb
-LOG_COUNT = 3
+MAX_LOGSIZE = 10 * 1024 * 1024  # 10Mb
+LOG_COUNT = 5
 
 VERIFIED_ENUM = {
     'unverified': 0,
