@@ -28,8 +28,8 @@ echo "=> Stop service"
 systemctl stop $SERVICE_NAME
 
 echo "=> Copy sources to $INSTALL_DIR"
-cp main.py $INSTALL_DIR
-cp -r src $INSTALL_DIR
+\cp -rf main.py $INSTALL_DIR
+\cp -rf src $INSTALL_DIR
 chown -R $USER:$GROUP $INSTALL_DIR
 chown -R $USER:$GROUP $DATA_DIR
 
