@@ -170,8 +170,8 @@ class DbManager:
         last = self.conn.execute(f'SELECT timestamp FROM {name} ORDER BY ROWID DESC LIMIT 1').fetchall()[0][0]
         return pd.to_timedelta((last - first) * 1e9)
 
-    def table_to_df(self, name) -> pd.DataFrame:
-        return pd.read_sql(f'SELECT * FROM {name}', self.conn)
+    def table_to_df(self, name, dtype=None) -> pd.DataFrame:
+        return pd.read_sql(f'SELECT * FROM {name}', self.conn, dtype)
 
     def table_tolist(self, name) -> list:
         return self.table_to_df(name).values.tolist()
