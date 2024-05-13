@@ -4,7 +4,6 @@ import signal
 import sqlite3
 import logging
 from time import time
-import pandas as pd
 
 from src.const import HARDWARE_COLS, COST_COLS, EOD_COLS, AVG_COLS
 from src.manager import DbManager
@@ -21,7 +20,6 @@ class VastDB:
 
     def __init__(self, db_path: str):
         self.dbm = DbManager(db_path)
-        # self.ts_idx = 'ts_idx'
         self.tables = {}
         self.init_tables()
         signal.signal(signal.SIGTERM, self.handle_sigterm)
@@ -54,6 +52,7 @@ class VastDB:
     def handle_sigterm(self, signum, frame):
         logging.warning('[OS] Received SIGTERM signal')
         if self.dbm.conn:
+            logging.info('[DB] Closing db connection')
             self.dbm.close()
         exit(0)
 
