@@ -33,7 +33,7 @@ gcloud compute scp --port 22222 free-ubn20:/home/ergot/vast.db vast.db
 ```
 
 
-# free google cloud vm
+### free google cloud vm
 * Machine type: e2-micro
 * Zone: us-central1-a
 * Networking: Standard Tier
