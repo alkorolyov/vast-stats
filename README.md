@@ -1,4 +1,4 @@
-Stats for vast.ai meant to be run of Google VM
+Fetches information about vast.ai every 1min and stores it in local SQLite database.
 
 ```
 git clone https://github.com/alkorolyov/vast-stats; cd vast-stats; sudo bash ./install.sh
