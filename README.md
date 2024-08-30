@@ -11,12 +11,12 @@ git clone https://github.com/alkorolyov/vast-stats; cd vast-stats; sudo bash ./i
 
 [//]: # (sudo -u vast curl -sSL https://raw.githubusercontent.com/alkorolyov/vast-stats/master/main.py -o /var/lib/vast-stats/main.py)
 
-# install gcloud cli
+### install gcloud cli
 ```
 https://dl.google.com/dl/cloudsdk/channels/rapid/GoogleCloudSDKInstaller.exe
 ```
 
-# download from gcloud
+### download from gcloud
 
 [//]: # (gcloud compute scp {vm_instance_name}:/var/lib/vast-stats/vast.db vast.db)
 
